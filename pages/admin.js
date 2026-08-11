@@ -7,7 +7,7 @@ const TAXONOMY = {
   'Epistemoloji': ['Diyalektik', 'Biliş Teorisi', 'İdealar Teorisi', 'Sezgi ve Kavrayış'],
   'Mistisizm': ['Vecd ve İttihad', 'Gnostisizm', 'Hint Mistisizmi', 'Teürji ve Arınma'],
   'Etkilenim': ['Platon ve Platoncu Gelenek', 'Aristoteles ve Yorumcuları', 'Stoacılık ve Orta Platonculuk', 'Doğu Doktrinleri'],
-  'Etki': ['Geç Antik Çağ ve Proklos', 'İslam Felsefesi', 'Rönesans Platonculuğu', 'Alman İdealizmi'],
+  'Etki': ['Geç Antik Çağ ve Proklos', 'İslam Felsefesi', 'Rönesans Platonculuğu', 'Alman İidealizmi'],
 };
 
 const EMPTY_SOURCE = {
@@ -184,13 +184,12 @@ function SourcesAdmin({ password }) {
     if (res.ok) load();
   }
 
-  // Kategori değiştiğinde alt kategoriyi sıfırlama mantığı
   const handleCategoryChange = (e) => {
     const newCat = e.target.value;
     setForm({
       ...form,
       kategori: newCat,
-      alt_kategori: '', // Kategori değiştiğinde eski alt kategoriyi temizle
+      alt_kategori: '',
     });
   };
 
@@ -209,7 +208,6 @@ function SourcesAdmin({ password }) {
             <input value={form.yazar} onChange={(e) => setForm({ ...form, yazar: e.target.value })} />
           </div>
 
-          {/* Ana Kategori Dropdown */}
           <div className="field">
             <label>Kategori</label>
             <select value={form.kategori} onChange={handleCategoryChange}>
@@ -220,7 +218,6 @@ function SourcesAdmin({ password }) {
             </select>
           </div>
 
-          {/* Alt Kategori Dinamik Dropdown */}
           <div className="field">
             <label>Alt Kategori</label>
             <select
@@ -245,7 +242,6 @@ function SourcesAdmin({ password }) {
           </div>
         </div>
 
-        {/* PDF Link Alanı */}
         <div className="field">
           <label>PDF Bağlantısı (URL)</label>
           <input
@@ -301,46 +297,153 @@ function SourcesAdmin({ password }) {
   );
 }
 
+// -------------------------------------------------------------
+// VİA PLOTİN YENİ ÇOKLU YAZI YÖNETİMİ
+// -------------------------------------------------------------
 function ViaPlotinAdmin({ password }) {
-  const [content, setContent] = useState('');
+  const [posts, setPosts] = useState([]);
+  const [form, setForm] = useState({ baslik: '', kategori: '', tarih: '', ozet: '', content: '' });
+  const [editingId, setEditingId] = useState(null);
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetch('/api/admin/via-plotin', { headers: authHeaders(password) })
-      .then((r) => r.json())
-      .then((d) => setContent(d?.content || ''))
-      .finally(() => setLoading(false));
-  }, []); // eslint-disable-line
+  async function load() {
+    setLoading(true);
+    const res = await fetch('/api/admin/via-plotin', { headers: authHeaders(password) });
+    if (res.ok) {
+      const data = await res.json();
+      setPosts(Array.isArray(data) ? data : []);
+    }
+    setLoading(false);
+  }
 
-  async function save() {
+  useEffect(() => { load(); }, []); // eslint-disable-line
+
+  async function handleSubmit(e) {
+    e.preventDefault();
     setStatus(null);
+    const method = editingId ? 'PUT' : 'POST';
+    const body = editingId ? { id: editingId, ...form } : form;
+    
     const res = await fetch('/api/admin/via-plotin', {
-      method: 'PUT',
+      method,
       headers: authHeaders(password),
-      body: JSON.stringify({ content }),
+      body: JSON.stringify(body),
     });
-    setStatus(res.ok ? { ok: true, msg: 'Kaydedildi.' } : { ok: false, msg: 'Hata oluştu.' });
+
+    if (res.ok) {
+      setStatus({ ok: true, msg: editingId ? 'Yazı güncellendi.' : 'Yazı başarıyla eklendi.' });
+      setForm({ baslik: '', kategori: '', tarih: '', ozet: '', content: '' });
+      setEditingId(null);
+      load();
+    } else {
+      setStatus({ ok: false, msg: 'Hata oluştu.' });
+    }
+  }
+
+  function startEdit(p) {
+    setEditingId(p.id);
+    setForm({
+      baslik: p.baslik || '',
+      kategori: p.kategori || '',
+      tarih: p.tarih || '',
+      ozet: p.ozet || '',
+      content: p.content || '',
+    });
+  }
+
+  async function handleDelete(id) {
+    if (!confirm('Bu yazıyı silmek istediğine emin misin?')) return;
+    const res = await fetch(`/api/admin/via-plotin?id=${id}`, {
+      method: 'DELETE',
+      headers: authHeaders(password),
+    });
+    if (res.ok) load();
   }
 
   return (
-    <div className="admin-section">
-      <h2 style={{ fontFamily: 'var(--font-display)', marginTop: 0 }}>Via Plotin İçeriği</h2>
-      {loading ? (
-        <p className="status">Yükleniyor...</p>
-      ) : (
-        <>
+    <div className="admin-section" style={{ marginTop: 40 }}>
+      <h2 style={{ fontFamily: 'var(--font-display)', marginTop: 0 }}>Via Plotin Yazıları</h2>
+
+      <form onSubmit={handleSubmit}>
+        <div className="grid grid-2">
           <div className="field">
-            <textarea
-              style={{ minHeight: 260 }}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
+            <label>Yazı Başlığı</label>
+            <input
+              value={form.baslik}
+              onChange={(e) => setForm({ ...form, baslik: e.target.value })}
+              required
             />
           </div>
-          <button className="btn" onClick={save}>Kaydet</button>
-          {status && <p className={`status ${status.ok ? 'ok' : 'err'}`}>{status.msg}</p>}
-        </>
-      )}
+          <div className="field">
+            <label>Kategori / Etiket</label>
+            <input
+              value={form.kategori}
+              onChange={(e) => setForm({ ...form, kategori: e.target.value })}
+              placeholder="Örn: ONTOLOJİ, NOUS"
+            />
+          </div>
+          <div className="field">
+            <label>Tarih / Tür</label>
+            <input
+              value={form.tarih}
+              onChange={(e) => setForm({ ...form, tarih: e.target.value })}
+              placeholder="Örn: 2026 · Makale"
+            />
+          </div>
+          <div className="field">
+            <label>Kısa Özet</label>
+            <input
+              value={form.ozet}
+              onChange={(e) => setForm({ ...form, ozet: e.target.value })}
+              placeholder="Kart üstünde görünecek kısa açıklama"
+            />
+          </div>
+        </div>
+
+        <div className="field">
+          <label>Yazı İçeriği (Ana Metin)</label>
+          <textarea
+            style={{ minHeight: 200 }}
+            value={form.content}
+            onChange={(e) => setForm({ ...form, content: e.target.value })}
+            required
+          />
+        </div>
+
+        <button className="btn" type="submit">{editingId ? 'Güncelle' : 'Yazı Ekle'}</button>
+        {editingId && (
+          <button
+            type="button"
+            className="btn secondary"
+            style={{ marginLeft: 10 }}
+            onClick={() => {
+              setEditingId(null);
+              setForm({ baslik: '', kategori: '', tarih: '', ozet: '', content: '' });
+            }}
+          >
+            İptal
+          </button>
+        )}
+        {status && <p className={`status ${status.ok ? 'ok' : 'err'}`}>{status.msg}</p>}
+      </form>
+
+      <div style={{ marginTop: 24 }}>
+        {loading && <p className="status">Yazılar yükleniyor...</p>}
+        {!loading && posts.map((p) => (
+          <div className="admin-row" key={p.id}>
+            <div>
+              <strong>{p.baslik || 'Başlıksız Yazı'}</strong>
+              <div className="meta">{p.kategori} {p.tarih ? `· ${p.tarih}` : ''}</div>
+            </div>
+            <div>
+              <button className="btn secondary" onClick={() => startEdit(p)}>Düzenle</button>
+              <button className="btn danger" style={{ marginLeft: 8 }} onClick={() => handleDelete(p.id)}>Sil</button>
+            </div>
+          </div>
+        ))}
+        {!loading && posts.length === 0 && <p className="status">Henüz eklenmiş yazı yok.</p>}
+      </div>
     </div>
   );
 }
