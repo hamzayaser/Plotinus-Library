@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 
+// Neoplatonik Felsefe Taksonomisi
+const TAXONOMY = {
+  'Ontoloji': ['Bir', 'Nous', 'Psyche', 'Emanasyon', 'Madde ve Kötülük'],
+  'Epistemoloji': ['Diyalektik', 'Biliş Teorisi', 'İdealar Teorisi', 'Sezgi ve Kavrayış'],
+  'Mistisizm': ['Vecd ve İttihad', 'Gnostisizm', 'Hint Mistisizmi', 'Teürji ve Arınma'],
+  'Etkilenim': ['Platon ve Platoncu Gelenek', 'Aristoteles ve Yorumcuları', 'Stoacılık ve Orta Platonculuk', 'Doğu Doktrinleri'],
+  'Etki': ['Geç Antik Çağ ve Proklos', 'İslam Felsefesi', 'Rönesans Platonculuğu', 'Alman İdealizmi'],
+};
+
 const EMPTY_SOURCE = {
   baslik: '',
   kategori: '',
@@ -9,6 +18,7 @@ const EMPTY_SOURCE = {
   yil: '',
   tip: '',
   aciklama: '',
+  pdf_url: '',
 };
 
 export default function Admin() {
@@ -161,6 +171,7 @@ function SourcesAdmin({ password }) {
       yil: s.yil || '',
       tip: s.tip || '',
       aciklama: s.aciklama || '',
+      pdf_url: s.pdf_url || '',
     });
   }
 
@@ -172,6 +183,16 @@ function SourcesAdmin({ password }) {
     });
     if (res.ok) load();
   }
+
+  // Kategori değiştiğinde alt kategoriyi sıfırlama mantığı
+  const handleCategoryChange = (e) => {
+    const newCat = e.target.value;
+    setForm({
+      ...form,
+      kategori: newCat,
+      alt_kategori: '', // Kategori değiştiğinde eski alt kategoriyi temizle
+    });
+  };
 
   return (
     <div className="admin-section">
@@ -187,27 +208,59 @@ function SourcesAdmin({ password }) {
             <label>Yazar</label>
             <input value={form.yazar} onChange={(e) => setForm({ ...form, yazar: e.target.value })} />
           </div>
+
+          {/* Ana Kategori Dropdown */}
           <div className="field">
             <label>Kategori</label>
-            <input value={form.kategori} onChange={(e) => setForm({ ...form, kategori: e.target.value })} />
+            <select value={form.kategori} onChange={handleCategoryChange}>
+              <option value="">-- Kategori Seç --</option>
+              {Object.keys(TAXONOMY).map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
           </div>
+
+          {/* Alt Kategori Dinamik Dropdown */}
           <div className="field">
-            <label>Alt kategori</label>
-            <input value={form.alt_kategori} onChange={(e) => setForm({ ...form, alt_kategori: e.target.value })} />
+            <label>Alt Kategori</label>
+            <select
+              value={form.alt_kategori}
+              onChange={(e) => setForm({ ...form, alt_kategori: e.target.value })}
+              disabled={!form.kategori}
+            >
+              <option value="">-- Alt Kategori Seç --</option>
+              {form.kategori && TAXONOMY[form.kategori]?.map((subCat) => (
+                <option key={subCat} value={subCat}>{subCat}</option>
+              ))}
+            </select>
           </div>
+
           <div className="field">
             <label>Yıl</label>
             <input value={form.yil} onChange={(e) => setForm({ ...form, yil: e.target.value })} />
           </div>
           <div className="field">
             <label>Tip</label>
-            <input value={form.tip} onChange={(e) => setForm({ ...form, tip: e.target.value })} placeholder="Kitap, Makale..." />
+            <input value={form.tip} onChange={(e) => setForm({ ...form, tip: e.target.value })} placeholder="Makale, Kitap, Risale..." />
           </div>
         </div>
+
+        {/* PDF Link Alanı */}
+        <div className="field">
+          <label>PDF Bağlantısı (URL)</label>
+          <input
+            type="url"
+            placeholder="https://..."
+            value={form.pdf_url}
+            onChange={(e) => setForm({ ...form, pdf_url: e.target.value })}
+          />
+        </div>
+
         <div className="field">
           <label>Açıklama</label>
           <textarea value={form.aciklama} onChange={(e) => setForm({ ...form, aciklama: e.target.value })} />
         </div>
+
         <button className="btn" type="submit">{editingId ? 'Güncelle' : 'Ekle'}</button>
         {editingId && (
           <button
@@ -228,7 +281,13 @@ function SourcesAdmin({ password }) {
           <div className="admin-row" key={s.id}>
             <div>
               <strong>{s.baslik}</strong>
-              <div className="meta">{s.yazar} {s.yil ? `· ${s.yil}` : ''} · {s.kategori}</div>
+              <div className="meta">
+                {s.yazar} {s.yil ? `· ${s.yil}` : ''} · 
+                <span style={{ color: 'var(--color-primary, #c5a059)', marginLeft: 4 }}>
+                  [{s.kategori} {s.alt_kategori ? `> ${s.alt_kategori}` : ''}]
+                </span>
+                {s.pdf_url && <span style={{ marginLeft: 8 }}>📄 PDF Var</span>}
+              </div>
             </div>
             <div>
               <button className="btn secondary" onClick={() => startEdit(s)}>Düzenle</button>
