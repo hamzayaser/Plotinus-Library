@@ -2,6 +2,42 @@ import { useState } from 'react';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/supabaseClient';
 
+// Açılır/Kapanır Metin Komponenti (Accordion)
+function ExpandableText({ text, limit = 120 }) {
+  const [expanded, setExpanded] = useState(false);
+
+  // Metin limitten kısaysa doğrudan göster
+  if (!text || text.length <= limit) {
+    return <p className="desc">{text}</p>;
+  }
+
+  return (
+    <div className="desc-container">
+      <p className="desc" style={{ marginBottom: 4 }}>
+        {expanded ? text : `${text.slice(0, limit)}...`}
+      </p>
+      <button
+        onClick={() => setExpanded(!expanded)}
+        style={{
+          background: 'none',
+          border: 'none',
+          color: 'var(--gold, #d4af37)',
+          cursor: 'pointer',
+          padding: 0,
+          fontSize: '0.8rem',
+          fontWeight: '600',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '4px',
+          marginBottom: '12px',
+        }}
+      >
+        {expanded ? 'Daralt ▲' : 'Devamını Oku ▼'}
+      </button>
+    </div>
+  );
+}
+
 export default function Kutuphane({ sources, error }) {
   const [selectedCategory, setSelectedCategory] = useState('Tümü');
   const [selectedSubCategory, setSelectedSubCategory] = useState('Tümü');
@@ -110,14 +146,41 @@ export default function Kutuphane({ sources, error }) {
           {/* 📚 KARTLARIN LİSTELENMESİ */}
           <div className="grid grid-2">
             {filteredSources.map((s) => (
-              <div className="card" key={s.id}>
-                <span className="tag">{s.kategori}</span>
-                {s.alt_kategori && <span className="tag">{s.alt_kategori}</span>}
-                <h3>{s.baslik}</h3>
-                <div className="meta">
-                  {s.yazar} {s.yil ? `· ${s.yil}` : ''} {s.tip ? `· ${s.tip}` : ''}
+              <div className="card" key={s.id} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                    {s.kategori && <span className="tag">{s.kategori}</span>}
+                    {s.alt_kategori && <span className="tag" style={{ opacity: 0.8 }}>{s.alt_kategori}</span>}
+                  </div>
+                  <h3>{s.baslik}</h3>
+                  <div className="meta">
+                    {s.yazar} {s.yil ? `· ${s.yil}` : ''} {s.tip ? `· ${s.tip}` : ''}
+                  </div>
+                  {s.aciklama && <ExpandableText text={s.aciklama} limit={120} />}
                 </div>
-                {s.aciklama && <p className="desc">{s.aciklama}</p>}
+
+                {/* PDF İNDİRME / GÖRÜNTÜLEME BUTONU */}
+                {s.pdf_url && (
+                  <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                    <a
+                      href={s.pdf_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn secondary"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontSize: '0.8rem',
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      📄 PDF'i Görüntüle
+                    </a>
+                  </div>
+                )}
               </div>
             ))}
           </div>
