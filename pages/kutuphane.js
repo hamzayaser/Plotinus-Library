@@ -20,11 +20,11 @@ function ExpandableText({ text, limit = 120 }) {
         style={{
           background: 'none',
           border: 'none',
-          color: 'var(--gold, #d4af37)',
+          color: 'var(--gold-bright, #d9b869)',
           cursor: 'pointer',
           padding: 0,
-          fontSize: '0.8rem',
-          fontWeight: '600',
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.75rem',
           display: 'inline-flex',
           alignItems: 'center',
           gap: '4px',
@@ -37,15 +37,18 @@ function ExpandableText({ text, limit = 120 }) {
   );
 }
 
-export default function Kutuphane({ sources, error }) {
+export default function Kutuphane({ sources = [], error }) {
   const [selectedCategory, setSelectedCategory] = useState('Tümü');
   const [selectedSubCategory, setSelectedSubCategory] = useState('Tümü');
 
-  // Helper: Bir kaynağın kategorilerini dizi olarak alma (Çoklu kategori desteği)
+  // Helper: Bir kaynağın kategorilerini güvenli diziye çevirme (Çoklu kategori desteği)
   const getSourceCategories = (source) => {
     if (!source.kategori) return [];
     if (Array.isArray(source.kategori)) return source.kategori;
-    return source.kategori.split(',').map((c) => c.trim()).filter(Boolean);
+    if (typeof source.kategori === 'string') {
+      return source.kategori.split(',').map((c) => c.trim()).filter(Boolean);
+    }
+    return [];
   };
 
   // 1. Ana Kategorileri ve İçerik Sayılarını Hesaplama + Alfabetik Sıralama
@@ -62,7 +65,7 @@ export default function Kutuphane({ sources, error }) {
     return [{ name: 'Tümü', count: sources.length }, ...sortedCats.map((cat) => ({ name: cat, count: counts[cat] }))];
   }, [sources]);
 
-  // 2. Seçilen Ana Kategoriye Ait Alt Kategorileri ve Sayılarını Hesaplama
+  // 2. Alt Kategorileri ve Sayılarını Hesaplama
   const subCategoriesWithCounts = useMemo(() => {
     if (selectedCategory === 'Tümü') return [];
 
@@ -81,7 +84,7 @@ export default function Kutuphane({ sources, error }) {
     return [{ name: 'Tümü', count: totalSubCount }, ...sortedSubCats.map((sub) => ({ name: sub, count: counts[sub] }))];
   }, [sources, selectedCategory]);
 
-  // 3. Ana Kategori ve Alt Kategoriye Göre Filtreleme Mantığı
+  // 3. Filtreleme Mantığı
   const filteredSources = useMemo(() => {
     return sources.filter((s) => {
       const cats = getSourceCategories(s);
@@ -102,7 +105,7 @@ export default function Kutuphane({ sources, error }) {
       </section>
 
       <section className="section" style={{ borderTop: 'none' }}>
-        <div className="container" style={{ maxWidth: '1400px' }}>
+        <div className="container-wide">
           {error && <p className="status err">Kaynaklar yüklenemedi: {error}</p>}
           {!error && sources.length === 0 && (
             <p className="status">Henüz kaynak eklenmemiş.</p>
@@ -123,16 +126,17 @@ export default function Kutuphane({ sources, error }) {
                     style={{
                       padding: '8px 16px',
                       borderRadius: '20px',
-                      border: '1px solid ' + (selectedCategory === name ? 'var(--gold, #d4af37)' : 'rgba(255,255,255,0.15)'),
-                      backgroundColor: selectedCategory === name ? 'var(--gold, #d4af37)' : 'transparent',
-                      color: selectedCategory === name ? '#000' : '#fff',
+                      border: '1px solid ' + (selectedCategory === name ? 'var(--gold)' : 'var(--line)'),
+                      backgroundColor: selectedCategory === name ? 'var(--gold)' : 'transparent',
+                      color: selectedCategory === name ? 'var(--ink)' : 'var(--parchment)',
                       cursor: 'pointer',
-                      fontSize: '0.85rem',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '0.75rem',
                       fontWeight: selectedCategory === name ? '600' : '400',
                       transition: 'all 0.2s ease',
                     }}
                   >
-                    {name} <span style={{ opacity: 0.75, fontSize: '0.78rem' }}>({count})</span>
+                    {name} <span style={{ opacity: 0.75 }}>({count})</span>
                   </button>
                 ))}
               </div>
@@ -145,7 +149,7 @@ export default function Kutuphane({ sources, error }) {
                     gap: '8px',
                     flexWrap: 'wrap',
                     paddingLeft: '12px',
-                    borderLeft: '2px solid var(--gold, #d4af37)',
+                    borderLeft: '2px solid var(--gold)',
                     marginTop: '12px',
                   }}
                 >
@@ -156,11 +160,12 @@ export default function Kutuphane({ sources, error }) {
                       style={{
                         padding: '5px 12px',
                         borderRadius: '15px',
-                        border: '1px solid ' + (selectedSubCategory === name ? 'var(--gold, #d4af37)' : 'rgba(255,255,255,0.1)'),
-                        backgroundColor: selectedSubCategory === name ? 'rgba(212, 175, 55, 0.2)' : 'transparent',
-                        color: selectedSubCategory === name ? 'var(--gold, #d4af37)' : '#ccc',
+                        border: '1px solid ' + (selectedSubCategory === name ? 'var(--gold)' : 'var(--line)'),
+                        backgroundColor: selectedSubCategory === name ? 'rgba(183, 138, 52, 0.2)' : 'transparent',
+                        color: selectedSubCategory === name ? 'var(--gold-bright)' : 'var(--parchment-dim)',
                         cursor: 'pointer',
-                        fontSize: '0.78rem',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '0.72rem',
                         transition: 'all 0.2s ease',
                       }}
                     >
@@ -172,7 +177,7 @@ export default function Kutuphane({ sources, error }) {
             </div>
           )}
 
-          {/* 📚 KARTLARIN LİSTELENMESİ (Duyarlı 5'li Izgara) */}
+          {/* 📚 KARTLARIN LİSTELENMESİ (5'li Izgara) */}
           <div className="grid grid-library">
             {filteredSources.map((s) => {
               const cats = getSourceCategories(s);
@@ -183,7 +188,11 @@ export default function Kutuphane({ sources, error }) {
                       {cats.map((cat, idx) => (
                         <span className="tag" key={idx}>{cat}</span>
                       ))}
-                      {s.alt_kategori && <span className="tag" style={{ opacity: 0.8, borderColor: 'rgba(255,255,255,0.2)', color: '#ccc' }}>{s.alt_kategori}</span>}
+                      {s.alt_kategori && (
+                        <span className="tag" style={{ opacity: 0.7, borderColor: 'var(--line-strong)', color: 'var(--parchment-dim)' }}>
+                          {s.alt_kategori}
+                        </span>
+                      )}
                     </div>
                     <h3>{s.baslik}</h3>
                     <div className="meta">
@@ -197,7 +206,7 @@ export default function Kutuphane({ sources, error }) {
 
                   {/* PDF İNDİRME / GÖRÜNTÜLEME BUTONU */}
                   {s.pdf_url && (
-                    <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--line)' }}>
                       <a
                         href={s.pdf_url}
                         target="_blank"
@@ -207,12 +216,11 @@ export default function Kutuphane({ sources, error }) {
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '6px',
-                          fontSize: '0.78rem',
+                          fontSize: '0.7rem',
                           padding: '6px 12px',
-                          borderRadius: '6px',
-                          textDecoration: 'none',
                           width: '100%',
-                          justifyContent: 'center'
+                          justifyContent: 'center',
+                          borderRadius: '3px'
                         }}
                       >
                         📄 PDF'i Görüntüle
@@ -224,7 +232,6 @@ export default function Kutuphane({ sources, error }) {
             })}
           </div>
 
-          {/* Filtre sonucu boş çıkarsa gösterilecek mesaj */}
           {!error && sources.length > 0 && filteredSources.length === 0 && (
             <p className="status" style={{ marginTop: 20 }}>
               Bu kategoride henüz bir kaynak bulunmuyor.
