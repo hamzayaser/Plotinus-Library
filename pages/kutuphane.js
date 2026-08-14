@@ -2,41 +2,6 @@ import { useState, useMemo } from 'react';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/supabaseClient';
 
-// Açılır/Kapanır Metin Komponenti (Accordion)
-function ExpandableText({ text, limit = 120 }) {
-  const [expanded, setExpanded] = useState(false);
-
-  if (!text || text.length <= limit) {
-    return <p className="desc">{text}</p>;
-  }
-
-  return (
-    <div className="desc-container">
-      <p className="desc" style={{ marginBottom: 4 }}>
-        {expanded ? text : `${text.slice(0, limit)}...`}
-      </p>
-      <button
-        onClick={() => setExpanded(!expanded)}
-        style={{
-          background: 'none',
-          border: 'none',
-          color: 'var(--gold-bright, #d9b869)',
-          cursor: 'pointer',
-          padding: 0,
-          fontFamily: 'var(--font-mono)',
-          fontSize: '0.75rem',
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '4px',
-          marginBottom: '12px',
-        }}
-      >
-        {expanded ? 'Daralt ▲' : 'Devamını Oku ▼'}
-      </button>
-    </div>
-  );
-}
-
 export default function Kutuphane({ sources = [], error }) {
   const [selectedCategory, setSelectedCategory] = useState('Tümü');
   const [selectedSubCategory, setSelectedSubCategory] = useState('Tümü');
@@ -84,14 +49,17 @@ export default function Kutuphane({ sources = [], error }) {
     return [{ name: 'Tümü', count: totalSubCount }, ...sortedSubCats.map((sub) => ({ name: sub, count: counts[sub] }))];
   }, [sources, selectedCategory]);
 
-  // 3. Filtreleme Mantığı
+  // 3. Filtreleme + ALFABETİK SIRALAMA
   const filteredSources = useMemo(() => {
-    return sources.filter((s) => {
+    const filtered = sources.filter((s) => {
       const cats = getSourceCategories(s);
       const matchesCategory = selectedCategory === 'Tümü' || cats.includes(selectedCategory);
       const matchesSubCategory = selectedSubCategory === 'Tümü' || s.alt_kategori === selectedSubCategory;
       return matchesCategory && matchesSubCategory;
     });
+
+    // Başlığa göre alfabetik sıralama (Türkçe karakter duyarlı)
+    return filtered.sort((a, b) => (a.baslik || '').localeCompare(b.baslik || '', 'tr'));
   }, [sources, selectedCategory, selectedSubCategory]);
 
   return (
@@ -177,7 +145,7 @@ export default function Kutuphane({ sources = [], error }) {
             </div>
           )}
 
-          {/* 📚 KARTLARIN LİSTELENMESİ (5'li Izgara) */}
+          {/* 📚 KARTLARIN LİSTELENMESİ (5'li Izgara) — açıklama kaldırıldı */}
           <div className="grid grid-library">
             {filteredSources.map((s) => {
               const cats = getSourceCategories(s);
@@ -201,13 +169,12 @@ export default function Kutuphane({ sources = [], error }) {
                       {s.yil ? ` · ${s.yil}` : ''}
                       {s.tip ? ` · ${s.tip}` : ''}
                     </div>
-                    {s.aciklama && <ExpandableText text={s.aciklama} limit={110} />}
                   </div>
 
                   {/* PDF İNDİRME / GÖRÜNTÜLEME BUTONU */}
                   {s.pdf_url && (
                     <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--line)' }}>
-                      <a
+                      
                         href={s.pdf_url}
                         target="_blank"
                         rel="noopener noreferrer"

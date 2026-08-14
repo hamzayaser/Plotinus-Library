@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Layout from '../components/Layout';
 
-// Neoplatonik Felsefe Taksonomisi (Güncellendi)
+// Neoplatonik Felsefe Taksonomisi
 const TAXONOMY = {
   'Ontoloji': ['Bir', 'Nous', 'Psyche', 'Emanasyon', 'Madde ve Kötülük'],
   'Epistemoloji': ['Diyalektik', 'Biliş Teorisi', 'İdealar Teorisi', 'Sezgi ve Kavrayış'],
@@ -130,6 +130,116 @@ function authHeaders(password) {
   return { 'Content-Type': 'application/json', 'x-admin-password': password };
 }
 
+// ---------------------------------------------------------------
+// AÇILIR/KAPANIR ÇOKLU KATEGORİ SEÇİCİ (Dropdown Multi-select)
+// ---------------------------------------------------------------
+function CategoryDropdown({ selected, onChange, taxonomyKeys }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const toggle = (cat) => {
+    let next = Array.isArray(selected) ? [...selected] : [];
+    if (next.includes(cat)) next = next.filter((c) => c !== cat);
+    else next.push(cat);
+    onChange(next);
+  };
+
+  const label =
+    selected.length === 0
+      ? '-- Kategori Seç --'
+      : selected.length <= 2
+      ? selected.join(', ')
+      : `${selected.length} kategori seçildi`;
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          width: '100%',
+          textAlign: 'left',
+          padding: '10px 14px',
+          borderRadius: '6px',
+          border: '1px solid var(--line, rgba(255,255,255,0.15))',
+          background: 'rgba(255,255,255,0.03)',
+          color: selected.length ? 'var(--parchment, #fff)' : 'var(--parchment-dim, #999)',
+          cursor: 'pointer',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontSize: '0.9rem',
+        }}
+      >
+        <span>{label}</span>
+        <span
+          style={{
+            opacity: 0.6,
+            transform: open ? 'rotate(180deg)' : 'none',
+            transition: 'transform 0.15s ease',
+          }}
+        >
+          ▾
+        </span>
+      </button>
+
+      {open && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 6px)',
+            left: 0,
+            right: 0,
+            zIndex: 30,
+            background: 'var(--ink, #14100c)',
+            border: '1px solid var(--gold, #d4af37)',
+            borderRadius: '8px',
+            padding: '10px',
+            maxHeight: '280px',
+            overflowY: 'auto',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))',
+            gap: '6px',
+          }}
+        >
+          {taxonomyKeys.map((cat) => (
+            <label
+              key={cat}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                padding: '4px 6px',
+                borderRadius: '4px',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={selected.includes(cat)}
+                onChange={() => toggle(cat)}
+              />
+              {cat}
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SourcesAdmin({ password }) {
   const [sources, setSources] = useState([]);
   const [form, setForm] = useState(EMPTY_SOURCE);
@@ -147,15 +257,25 @@ function SourcesAdmin({ password }) {
 
   useEffect(() => { load(); }, []); // eslint-disable-line
 
+  // Seçilen ana kategori(ler)e göre kullanılabilir alt kategoriler (birleşim, tekrarsız, alfabetik)
+  const availableSubCats = useMemo(() => {
+    const cats = Array.isArray(form.kategori) ? form.kategori : [];
+    const set = new Set();
+    cats.forEach((cat) => {
+      (TAXONOMY[cat] || []).forEach((sub) => set.add(sub));
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'tr'));
+  }, [form.kategori]);
+
   async function handleSubmit(e) {
     e.preventDefault();
     setStatus(null);
     const method = editingId ? 'PUT' : 'POST';
-    
+
     // Kategorileri string/array dönüşümü
     const payload = {
       ...form,
-      kategori: Array.isArray(form.kategori) ? form.kategori.join(', ') : form.kategori
+      kategori: Array.isArray(form.kategori) ? form.kategori.join(', ') : form.kategori,
     };
 
     const body = editingId ? { id: editingId, ...payload } : payload;
@@ -179,7 +299,7 @@ function SourcesAdmin({ password }) {
     setEditingId(s.id);
     let cats = [];
     if (Array.isArray(s.kategori)) cats = s.kategori;
-    else if (typeof s.kategori === 'string') cats = s.kategori.split(',').map(c => c.trim()).filter(Boolean);
+    else if (typeof s.kategori === 'string') cats = s.kategori.split(',').map((c) => c.trim()).filter(Boolean);
 
     setForm({
       baslik: s.baslik || '',
@@ -203,14 +323,20 @@ function SourcesAdmin({ password }) {
     if (res.ok) load();
   }
 
-  const handleCategoryCheckbox = (cat) => {
-    let current = Array.isArray(form.kategori) ? [...form.kategori] : [];
-    if (current.includes(cat)) {
-      current = current.filter(c => c !== cat);
-    } else {
-      current.push(cat);
-    }
-    setForm({ ...form, kategori: current });
+  const handleCategoryChange = (next) => {
+    // Ana kategori değişince, artık geçersiz olan alt kategoriyi temizle
+    const cats = next;
+    const validSubs = new Set();
+    cats.forEach((cat) => (TAXONOMY[cat] || []).forEach((sub) => validSubs.add(sub)));
+    setForm({
+      ...form,
+      kategori: cats,
+      alt_kategori: validSubs.has(form.alt_kategori) ? form.alt_kategori : '',
+    });
+  };
+
+  const removeCategory = (cat) => {
+    handleCategoryChange(form.kategori.filter((c) => c !== cat));
   };
 
   const displayedSources = showAllSources ? sources : sources.slice(0, 5);
@@ -247,24 +373,57 @@ function SourcesAdmin({ password }) {
 
           <div className="field">
             <label>Alt Kategori (İsteğe bağlı)</label>
-            <input value={form.alt_kategori} onChange={(e) => setForm({ ...form, alt_kategori: e.target.value })} placeholder="Örn: Pre-Sokratikler, Gnostisizm..." />
+            <select
+              value={form.alt_kategori}
+              onChange={(e) => setForm({ ...form, alt_kategori: e.target.value })}
+              disabled={availableSubCats.length === 0}
+            >
+              <option value="">
+                {availableSubCats.length === 0 ? 'Önce ana kategori seçin' : '-- Alt Kategori Seç --'}
+              </option>
+              {availableSubCats.map((sub) => (
+                <option key={sub} value={sub}>{sub}</option>
+              ))}
+            </select>
           </div>
         </div>
 
         <div className="field" style={{ marginTop: 15 }}>
           <label>Kategoriler (Birden fazla seçebilirsin):</label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px', background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)' }}>
-            {Object.keys(TAXONOMY).map((cat) => (
-              <label key={cat} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={Array.isArray(form.kategori) && form.kategori.includes(cat)}
-                  onChange={() => handleCategoryCheckbox(cat)}
-                />
-                {cat}
-              </label>
-            ))}
-          </div>
+          <CategoryDropdown
+            selected={Array.isArray(form.kategori) ? form.kategori : []}
+            onChange={handleCategoryChange}
+            taxonomyKeys={Object.keys(TAXONOMY)}
+          />
+          {Array.isArray(form.kategori) && form.kategori.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+              {form.kategori.map((cat) => (
+                <span
+                  key={cat}
+                  className="tag"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                >
+                  {cat}
+                  <button
+                    type="button"
+                    onClick={() => removeCategory(cat)}
+                    aria-label={`${cat} kategorisini kaldır`}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'inherit',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem',
+                      lineHeight: 1,
+                      padding: 0,
+                    }}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="field" style={{ marginTop: 15 }}>
@@ -304,7 +463,7 @@ function SourcesAdmin({ password }) {
             <div>
               <strong>{s.baslik}</strong>
               <div className="meta">
-                {s.yazar} {s.cevirmen ? `(Çev: ${s.cevirmen})` : ''} {s.yil ? `· ${s.yil}` : ''} · 
+                {s.yazar} {s.cevirmen ? `(Çev: ${s.cevirmen})` : ''} {s.yil ? `· ${s.yil}` : ''} ·
                 <span style={{ color: 'var(--color-primary, #c5a059)', marginLeft: 4 }}>
                   [{s.kategori} {s.alt_kategori ? `> ${s.alt_kategori}` : ''}]
                 </span>
@@ -361,7 +520,7 @@ function ViaPlotinAdmin({ password }) {
     setStatus(null);
     const method = editingId ? 'PUT' : 'POST';
     const body = editingId ? { id: editingId, ...form } : form;
-    
+
     const res = await fetch('/api/admin/via-plotin', {
       method,
       headers: authHeaders(password),
