@@ -16,7 +16,7 @@ export default function Kutuphane({ sources = [], error }) {
     return [];
   };
 
-  // 1. Ana Kategorileri ve İçerik Sayılarını Hesaplama + Alfabetik Sıralama
+  // 1. Ana Kategorileri ve Icerik Sayilarini Hesaplama + Alfabetik Siralama
   const categoriesWithCounts = useMemo(() => {
     const counts = {};
     sources.forEach((s) => {
@@ -30,7 +30,7 @@ export default function Kutuphane({ sources = [], error }) {
     return [{ name: 'Tümü', count: sources.length }, ...sortedCats.map((cat) => ({ name: cat, count: counts[cat] }))];
   }, [sources]);
 
-  // 2. Alt Kategorileri ve Sayılarını Hesaplama
+  // 2. Alt Kategorileri ve Sayilarini Hesaplama
   const subCategoriesWithCounts = useMemo(() => {
     if (selectedCategory === 'Tümü') return [];
 
@@ -49,7 +49,7 @@ export default function Kutuphane({ sources = [], error }) {
     return [{ name: 'Tümü', count: totalSubCount }, ...sortedSubCats.map((sub) => ({ name: sub, count: counts[sub] }))];
   }, [sources, selectedCategory]);
 
-  // 3. Filtreleme + ALFABETİK SIRALAMA
+  // 3. Filtreleme + Alfabetik Siralama (baslik'a gore)
   const filteredSources = useMemo(() => {
     const filtered = sources.filter((s) => {
       const cats = getSourceCategories(s);
@@ -58,7 +58,6 @@ export default function Kutuphane({ sources = [], error }) {
       return matchesCategory && matchesSubCategory;
     });
 
-    // Başlığa göre alfabetik sıralama (Türkçe karakter duyarlı)
     return filtered.sort((a, b) => (a.baslik || '').localeCompare(b.baslik || '', 'tr'));
   }, [sources, selectedCategory, selectedSubCategory]);
 
@@ -79,10 +78,8 @@ export default function Kutuphane({ sources = [], error }) {
             <p className="status">Henüz kaynak eklenmemiş.</p>
           )}
 
-          {/* 🏷️ KATEGORİ VE ALT KATEGORİ FİLTRE BARI */}
           {!error && sources.length > 0 && (
             <div style={{ marginBottom: 40 }}>
-              {/* ANA KATEGORİLER */}
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
                 {categoriesWithCounts.map(({ name, count }) => (
                   <button
@@ -109,7 +106,6 @@ export default function Kutuphane({ sources = [], error }) {
                 ))}
               </div>
 
-              {/* ALT KATEGORİLER */}
               {subCategoriesWithCounts.length > 0 && (
                 <div
                   style={{
@@ -145,7 +141,6 @@ export default function Kutuphane({ sources = [], error }) {
             </div>
           )}
 
-          {/* 📚 KARTLARIN LİSTELENMESİ (5'li Izgara) — açıklama kaldırıldı */}
           <div className="grid grid-library">
             {filteredSources.map((s) => {
               const cats = getSourceCategories(s);
@@ -165,16 +160,15 @@ export default function Kutuphane({ sources = [], error }) {
                     <h3>{s.baslik}</h3>
                     <div className="meta">
                       {s.yazar}
-                      {s.cevirmen ? ` (Çev: ${s.cevirmen})` : ''}
-                      {s.yil ? ` · ${s.yil}` : ''}
-                      {s.tip ? ` · ${s.tip}` : ''}
+                      {s.cevirmen ? ' (Cev: ' + s.cevirmen + ')' : ''}
+                      {s.yil ? ' · ' + s.yil : ''}
+                      {s.tip ? ' · ' + s.tip : ''}
                     </div>
                   </div>
 
-                  {/* PDF İNDİRME / GÖRÜNTÜLEME BUTONU */}
                   {s.pdf_url && (
                     <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--line)' }}>
-                      
+                      <a
                         href={s.pdf_url}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -187,10 +181,10 @@ export default function Kutuphane({ sources = [], error }) {
                           padding: '6px 12px',
                           width: '100%',
                           justifyContent: 'center',
-                          borderRadius: '3px'
+                          borderRadius: '3px',
                         }}
                       >
-                        📄 PDF'i Görüntüle
+                        PDF&apos;i Görüntüle
                       </a>
                     </div>
                   )}
