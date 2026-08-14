@@ -15,7 +15,7 @@ export default function Layout({ children }) {
       <nav className="nav">
         <div className="nav-inner">
           <Link href="/" className="brand">
-            <em>Plotinus</em> Kütüphanesi
+            <em>Plotinos</em> Kütüphanesi
           </Link>
           <div className="nav-links">
             {NAV_ITEMS.map((item) => (
@@ -32,7 +32,7 @@ export default function Layout({ children }) {
       </nav>
       <main>{children}</main>
       <footer className="footer">
-        Ἓν καὶ Πᾶν — Bir ve Tümü · Plotinus Kütüphanesi © {new Date().getFullYear()}
+        Ἓν καὶ Πᾶν — Bir ve Tümü · Plotinos Kütüphanesi © {new Date().getFullYear()}
       </footer>
     </>
   );

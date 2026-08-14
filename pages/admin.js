@@ -1,20 +1,26 @@
 import { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 
-// Neoplatonik Felsefe Taksonomisi
+// Neoplatonik Felsefe Taksonomisi (Güncellendi)
 const TAXONOMY = {
   'Ontoloji': ['Bir', 'Nous', 'Psyche', 'Emanasyon', 'Madde ve Kötülük'],
   'Epistemoloji': ['Diyalektik', 'Biliş Teorisi', 'İdealar Teorisi', 'Sezgi ve Kavrayış'],
-  'Mistisizm': ['Vecd ve İttihad', 'Gnostisizm', 'Hint Mistisizmi', 'Teürji ve Arınma'],
-  'Etkilenim': ['Platon ve Platoncu Gelenek', 'Aristoteles ve Yorumcuları', 'Stoacılık ve Orta Platonculuk', 'Doğu Doktrinleri'],
-  'Etki': ['Geç Antik Çağ ve Proklos', 'İslam Felsefesi', 'Rönesans Platonculuğu', 'Alman İidealizmi'],
+  'Etik': ['Erdem', 'Ruhun Arınması', 'Mutluluk', 'İrade ve Özgürlük'],
+  'Estetik': ['Güzellik', 'Sanat ve Taklit', 'Orantı ve Form'],
+  'Mistisizm': ['Vecd ve İttihad', 'Hint Mistisizmi', 'Teürji ve Arınma'],
+  'Mitoloji ve Metafor': ['Semboller', 'Mitolojik Anlatılar', 'Alegori'],
+  'Mukayeseli Çalışmalar': ['Felsefe-Din Karşılaştırması', 'Doğu-Batı Karşılaştırması'],
+  'Etkilenim': ['Pre-Sokratikler', 'Gnostisizm', 'Platon ve Platoncu Gelenek', 'Aristoteles ve Yorumcuları', 'Stoacılık ve Orta Platonculuk', 'Doğu Doktrinleri'],
+  'Etki': ['Geç Antik Çağ ve Proklos', 'İslam Felsefesi', 'Rönesans Platonculuğu', 'Alman İdealizmi'],
+  'Türkçe Literatür': ['Kitap', 'Makale', 'Yüksek Lisans Tezi', 'Doktora Tezi'],
 };
 
 const EMPTY_SOURCE = {
   baslik: '',
-  kategori: '',
+  kategori: [], // Çoklu kategori seçimi için dizi
   alt_kategori: '',
   yazar: '',
+  cevirmen: '',
   yil: '',
   tip: '',
   aciklama: '',
@@ -130,6 +136,7 @@ function SourcesAdmin({ password }) {
   const [editingId, setEditingId] = useState(null);
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showAllSources, setShowAllSources] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -144,7 +151,14 @@ function SourcesAdmin({ password }) {
     e.preventDefault();
     setStatus(null);
     const method = editingId ? 'PUT' : 'POST';
-    const body = editingId ? { id: editingId, ...form } : form;
+    
+    // Kategorileri string/array dönüşümü
+    const payload = {
+      ...form,
+      kategori: Array.isArray(form.kategori) ? form.kategori.join(', ') : form.kategori
+    };
+
+    const body = editingId ? { id: editingId, ...payload } : payload;
     const res = await fetch('/api/admin/sources', {
       method,
       headers: authHeaders(password),
@@ -163,11 +177,16 @@ function SourcesAdmin({ password }) {
 
   function startEdit(s) {
     setEditingId(s.id);
+    let cats = [];
+    if (Array.isArray(s.kategori)) cats = s.kategori;
+    else if (typeof s.kategori === 'string') cats = s.kategori.split(',').map(c => c.trim()).filter(Boolean);
+
     setForm({
       baslik: s.baslik || '',
-      kategori: s.kategori || '',
+      kategori: cats,
       alt_kategori: s.alt_kategori || '',
       yazar: s.yazar || '',
+      cevirmen: s.cevirmen || '',
       yil: s.yil || '',
       tip: s.tip || '',
       aciklama: s.aciklama || '',
@@ -184,14 +203,17 @@ function SourcesAdmin({ password }) {
     if (res.ok) load();
   }
 
-  const handleCategoryChange = (e) => {
-    const newCat = e.target.value;
-    setForm({
-      ...form,
-      kategori: newCat,
-      alt_kategori: '',
-    });
+  const handleCategoryCheckbox = (cat) => {
+    let current = Array.isArray(form.kategori) ? [...form.kategori] : [];
+    if (current.includes(cat)) {
+      current = current.filter(c => c !== cat);
+    } else {
+      current.push(cat);
+    }
+    setForm({ ...form, kategori: current });
   };
+
+  const displayedSources = showAllSources ? sources : sources.slice(0, 5);
 
   return (
     <div className="admin-section">
@@ -209,40 +231,43 @@ function SourcesAdmin({ password }) {
           </div>
 
           <div className="field">
-            <label>Kategori</label>
-            <select value={form.kategori} onChange={handleCategoryChange}>
-              <option value="">-- Kategori Seç --</option>
-              {Object.keys(TAXONOMY).map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="field">
-            <label>Alt Kategori</label>
-            <select
-              value={form.alt_kategori}
-              onChange={(e) => setForm({ ...form, alt_kategori: e.target.value })}
-              disabled={!form.kategori}
-            >
-              <option value="">-- Alt Kategori Seç --</option>
-              {form.kategori && TAXONOMY[form.kategori]?.map((subCat) => (
-                <option key={subCat} value={subCat}>{subCat}</option>
-              ))}
-            </select>
+            <label>Çevirmen (Varsa)</label>
+            <input value={form.cevirmen} onChange={(e) => setForm({ ...form, cevirmen: e.target.value })} placeholder="Örn: Ahmet Arslan" />
           </div>
 
           <div className="field">
             <label>Yıl</label>
             <input value={form.yil} onChange={(e) => setForm({ ...form, yil: e.target.value })} />
           </div>
+
           <div className="field">
             <label>Tip</label>
-            <input value={form.tip} onChange={(e) => setForm({ ...form, tip: e.target.value })} placeholder="Makale, Kitap, Risale..." />
+            <input value={form.tip} onChange={(e) => setForm({ ...form, tip: e.target.value })} placeholder="Makale, Kitap, Yüksek Lisans Tezi..." />
+          </div>
+
+          <div className="field">
+            <label>Alt Kategori (İsteğe bağlı)</label>
+            <input value={form.alt_kategori} onChange={(e) => setForm({ ...form, alt_kategori: e.target.value })} placeholder="Örn: Pre-Sokratikler, Gnostisizm..." />
           </div>
         </div>
 
-        <div className="field">
+        <div className="field" style={{ marginTop: 15 }}>
+          <label>Kategoriler (Birden fazla seçebilirsin):</label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px', background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)' }}>
+            {Object.keys(TAXONOMY).map((cat) => (
+              <label key={cat} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={Array.isArray(form.kategori) && form.kategori.includes(cat)}
+                  onChange={() => handleCategoryCheckbox(cat)}
+                />
+                {cat}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="field" style={{ marginTop: 15 }}>
           <label>PDF Bağlantısı (URL)</label>
           <input
             type="url"
@@ -272,13 +297,14 @@ function SourcesAdmin({ password }) {
       </form>
 
       <div style={{ marginTop: 24 }}>
+        <h3>Ekli Kaynaklar ({sources.length})</h3>
         {loading && <p className="status">Yükleniyor...</p>}
-        {!loading && sources.map((s) => (
+        {!loading && displayedSources.map((s) => (
           <div className="admin-row" key={s.id}>
             <div>
               <strong>{s.baslik}</strong>
               <div className="meta">
-                {s.yazar} {s.yil ? `· ${s.yil}` : ''} · 
+                {s.yazar} {s.cevirmen ? `(Çev: ${s.cevirmen})` : ''} {s.yil ? `· ${s.yil}` : ''} · 
                 <span style={{ color: 'var(--color-primary, #c5a059)', marginLeft: 4 }}>
                   [{s.kategori} {s.alt_kategori ? `> ${s.alt_kategori}` : ''}]
                 </span>
@@ -291,6 +317,17 @@ function SourcesAdmin({ password }) {
             </div>
           </div>
         ))}
+
+        {!loading && sources.length > 5 && (
+          <button
+            className="btn secondary"
+            style={{ marginTop: 12, width: '100%' }}
+            onClick={() => setShowAllSources(!showAllSources)}
+          >
+            {showAllSources ? 'Listeyi Daralt ▲' : `Tüm Kaynakları Göster (${sources.length}) ▼`}
+          </button>
+        )}
+
         {!loading && sources.length === 0 && <p className="status">Henüz kaynak yok.</p>}
       </div>
     </div>

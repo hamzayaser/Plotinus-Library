@@ -8,10 +8,10 @@ export default function Home() {
         <EmanationRings />
         <div className="eyebrow">Neoplatonizm · Ontoloji Araştırmaları</div>
         <h1>
-          Bir'den <em>Tümü'ne</em>,<br /> taşan ışığın izinde
+          Bir'den <em>Tüm'e</em>,<br /> taşan ışığın izinde
         </h1>
         <p className="lead">
-          Plotinus, Porphyrios ve Neoplatonik gelenek üzerine bir araştırma
+          Plotinos, Porphyrios ve Neoplatonik gelenek üzerine bir araştırma
           kütüphanesi. Kaynaklar, notlar ve Via Plotin denemeleri tek çatı
           altında.
         </p>
@@ -36,7 +36,7 @@ export default function Home() {
               <span className="tag">Deneme</span>
               <h3>Via Plotin</h3>
               <p className="desc">
-                Plotinus ve Neoplatonizm üzerine araştırma notları ve uzun
+                Plotinos ve Neoplatonizm üzerine araştırma notları ve uzun
                 soluklu denemeler.
               </p>
             </Link>
@@ -45,7 +45,7 @@ export default function Home() {
               <h3>İletişim</h3>
               <p className="desc">
                 Sorularınız, katkılarınız ya da işbirliği önerileriniz için
-                iletişim bilgileri.
+                iletisim bilgileri.
               </p>
             </Link>
           </div>

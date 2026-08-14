@@ -16,10 +16,10 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { baslik, kategori, alt_kategori, yazar, yil, tip, aciklama } = req.body;
+    const { baslik, kategori, alt_kategori, yazar, cevirmen, yil, tip, aciklama, pdf_url } = req.body;
     const { data, error } = await supabaseAdmin
       .from('sources')
-      .insert([{ baslik, kategori, alt_kategori, yazar, yil, tip, aciklama }])
+      .insert([{ baslik, kategori, alt_kategori, yazar, cevirmen, yil, tip, aciklama, pdf_url }])
       .select();
     if (error) return res.status(500).json({ error: error.message });
     return res.status(201).json(data[0]);
