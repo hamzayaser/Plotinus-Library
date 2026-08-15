@@ -80,7 +80,7 @@ export default function Kutuphane({ sources = [], error }) {
 
   return (
     <Layout>
-      <section className="hero" style={{ paddingBottom: 40 }}>
+      <section className="hero" style={{ paddingBottom: 20 }}>
         <div className="eyebrow">Sources</div>
         <h1>Kütüphane</h1>
         <p className="lead">
@@ -96,10 +96,10 @@ export default function Kutuphane({ sources = [], error }) {
           )}
 
           {!error && sources.length > 0 && (
-            <div style={{ display: 'flex', gap: '32px', alignItems: 'flex-start' }}>
-              {/* SOL SIDEBAR: Kategoriler + Alt Kategoriler + Filtreler */}
-              <aside style={{ width: '260px', flexShrink: 0 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '28px' }}>
+            <div style={{ display: 'flex', gap: '28px', alignItems: 'flex-start' }}>
+              {/* SOL SIDEBAR */}
+              <aside style={{ width: '220px', flexShrink: 0 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '24px' }}>
                   {categoriesWithCounts.map(({ name, count }) => (
                     <div key={name}>
                       <button
@@ -110,32 +110,30 @@ export default function Kutuphane({ sources = [], error }) {
                         style={{
                           width: '100%',
                           textAlign: 'left',
-                          padding: '8px 14px',
-                          borderRadius: '6px',
-                          border: '1px solid ' + (selectedCategory === name ? 'var(--gold)' : 'var(--line)'),
-                          backgroundColor: selectedCategory === name ? 'var(--gold)' : 'transparent',
-                          color: selectedCategory === name ? 'var(--ink)' : 'var(--parchment)',
+                          padding: '6px 12px',
+                          borderRadius: '4px',
+                          border: '1px solid ' + (selectedCategory === name ? 'var(--gold)' : 'transparent'),
+                          backgroundColor: selectedCategory === name ? 'rgba(183, 138, 52, 0.15)' : 'transparent',
+                          color: selectedCategory === name ? 'var(--gold-bright)' : 'var(--parchment)',
                           cursor: 'pointer',
                           fontFamily: 'var(--font-mono)',
-                          fontSize: '0.75rem',
-                          fontWeight: selectedCategory === name ? '600' : '400',
+                          fontSize: '0.72rem',
                           transition: 'all 0.2s ease',
                         }}
                       >
-                        {name} <span style={{ opacity: 0.75 }}>({count})</span>
+                        {name} <span style={{ opacity: 0.6 }}>({count})</span>
                       </button>
 
-                      {/* Bu kategori seçiliyse, hemen altında alt kategoriler listelensin */}
                       {selectedCategory === name && subCategoriesWithCounts.length > 0 && (
                         <div
                           style={{
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: '4px',
-                            marginTop: '6px',
-                            marginBottom: '6px',
-                            paddingLeft: '12px',
-                            borderLeft: '2px solid var(--gold)',
+                            gap: '3px',
+                            marginTop: '4px',
+                            marginBottom: '4px',
+                            paddingLeft: '10px',
+                            borderLeft: '1px solid var(--gold)',
                           }}
                         >
                           {subCategoriesWithCounts.map((sub) => (
@@ -144,17 +142,17 @@ export default function Kutuphane({ sources = [], error }) {
                               onClick={() => setSelectedSubCategory(sub.name)}
                               style={{
                                 textAlign: 'left',
-                                padding: '5px 10px',
-                                borderRadius: '15px',
-                                border: '1px solid ' + (selectedSubCategory === sub.name ? 'var(--gold)' : 'var(--line)'),
-                                backgroundColor: selectedSubCategory === sub.name ? 'rgba(183, 138, 52, 0.2)' : 'transparent',
+                                padding: '3px 8px',
+                                borderRadius: '3px',
+                                border: 'none',
+                                backgroundColor: selectedSubCategory === sub.name ? 'rgba(183, 138, 52, 0.25)' : 'transparent',
                                 color: selectedSubCategory === sub.name ? 'var(--gold-bright)' : 'var(--parchment-dim)',
                                 cursor: 'pointer',
                                 fontFamily: 'var(--font-mono)',
-                                fontSize: '0.72rem',
+                                fontSize: '0.68rem',
                               }}
                             >
-                              {sub.name} <span style={{ opacity: 0.7 }}>({sub.count})</span>
+                              {sub.name} <span style={{ opacity: 0.6 }}>({sub.count})</span>
                             </button>
                           ))}
                         </div>
@@ -163,38 +161,38 @@ export default function Kutuphane({ sources = [], error }) {
                   ))}
                 </div>
 
-                {/* FİLTRELER: Yıl Aralığı + Dil */}
-                <div style={{ borderTop: '1px solid var(--line)', paddingTop: '16px' }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', opacity: 0.7, marginBottom: '10px' }}>
+                {/* FİLTRELER */}
+                <div style={{ borderTop: '1px solid var(--line)', paddingTop: '14px' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.68rem', opacity: 0.6, marginBottom: '8px' }}>
                     FİLTRELER
                   </div>
 
-                  <div style={{ marginBottom: '16px' }}>
-                    <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '6px' }}>Yıl Aralığı</label>
-                    <div style={{ display: 'flex', gap: '6px' }}>
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: '4px' }}>Yıl Aralığı</label>
+                    <div style={{ display: 'flex', gap: '4px' }}>
                       <input
                         type="number"
                         placeholder="Başlangıç"
                         value={yilBaslangic}
                         onChange={(e) => setYilBaslangic(e.target.value)}
-                        style={{ width: '50%', fontSize: '0.75rem', padding: '6px 8px' }}
+                        style={{ width: '50%', fontSize: '0.7rem', padding: '4px 6px' }}
                       />
                       <input
                         type="number"
                         placeholder="Bitiş"
                         value={yilBitis}
                         onChange={(e) => setYilBitis(e.target.value)}
-                        style={{ width: '50%', fontSize: '0.75rem', padding: '6px 8px' }}
+                        style={{ width: '50%', fontSize: '0.7rem', padding: '4px 6px' }}
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '6px' }}>Dil</label>
+                    <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: '4px' }}>Dil</label>
                     <select
                       value={selectedDil}
                       onChange={(e) => setSelectedDil(e.target.value)}
-                      style={{ width: '100%', fontSize: '0.75rem', padding: '6px 8px' }}
+                      style={{ width: '100%', fontSize: '0.7rem', padding: '4px 6px' }}
                     >
                       {dilOptions.map((d) => (
                         <option key={d} value={d}>{d}</option>
@@ -204,56 +202,84 @@ export default function Kutuphane({ sources = [], error }) {
                 </div>
               </aside>
 
-              {/* SAĞ: Eser kartları */}
+              {/* SAĞ: Kompakt Kartlar */}
               <div style={{ flex: 1 }}>
-                <div className="grid grid-library">
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                    gap: '16px',
+                  }}
+                >
                   {filteredSources.map((s) => {
                     const cats = getSourceCategories(s);
                     const subs = getSourceSubCategories(s);
                     return (
-                      <div className="card" key={s.id} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      <div
+                        className="card"
+                        key={s.id}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justify: 'space-between',
+                          padding: '16px',
+                          minHeight: '150px',
+                        }}
+                      >
                         <div>
+                          {/* Etiketler */}
                           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '8px' }}>
                             {cats.map((cat, idx) => (
-                              <span className="tag" key={idx}>{cat}</span>
+                              <span className="tag" key={idx} style={{ fontSize: '0.62rem', padding: '2px 6px' }}>{cat}</span>
                             ))}
                             {subs.map((sub, idx) => (
-                              <span className="tag" key={'sub-' + idx} style={{ opacity: 0.7, borderColor: 'var(--line-strong)', color: 'var(--parchment-dim)' }}>
+                              <span
+                                className="tag"
+                                key={'sub-' + idx}
+                                style={{
+                                  fontSize: '0.62rem',
+                                  padding: '2px 6px',
+                                  opacity: 0.7,
+                                  borderColor: 'var(--line-strong)',
+                                  color: 'var(--parchment-dim)',
+                                }}
+                              >
                                 {sub}
                               </span>
                             ))}
                           </div>
-                          <h3>{s.baslik}</h3>
-                          <div className="meta">
+
+                          <h3 style={{ fontSize: '0.95rem', lineHeight: '1.3', marginBottom: '6px' }}>{s.baslik}</h3>
+                        </div>
+
+                        {/* Yazar Bilgisi ve PDF Bağlantısı */}
+                        <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '8px' }}>
+                          <div className="meta" style={{ fontSize: '0.72rem', margin: 0 }}>
                             {s.yazar}
                             {s.cevirmen ? ' (Çev: ' + s.cevirmen + ')' : ''}
                             {s.yil ? ' · ' + s.yil : ''}
                             {s.tip ? ' · ' + s.tip : ''}
                           </div>
-                        </div>
 
-                        {s.pdf_url && (
-                          <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--line)' }}>
+                          {s.pdf_url && (
                             <a
                               href={s.pdf_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="btn secondary"
                               style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                fontSize: '0.7rem',
-                                padding: '6px 12px',
-                                width: '100%',
-                                justifyContent: 'center',
-                                borderRadius: '3px',
+                                fontSize: '0.68rem',
+                                fontFamily: 'var(--font-mono)',
+                                color: 'var(--gold-bright)',
+                                textDecoration: 'none',
+                                borderBottom: '1px dashed var(--gold)',
+                                whiteSpace: 'nowrap',
+                                paddingBottom: '1px',
                               }}
                             >
-                              PDF&apos;i Görüntüle
+                              PDF ↗
                             </a>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     );
                   })}
