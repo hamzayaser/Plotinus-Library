@@ -97,7 +97,6 @@ export default function Kutuphane({ sources = [], error }) {
 
   const handleCategoryClick = (name) => {
     if (selectedCategory === name && name !== 'Tümü') {
-      // Aynı kategoriye tekrar tıklanınca alt kategoriler kapanır
       setSelectedCategory('Tümü');
       setSelectedSubCategory('Tümü');
     } else {
@@ -262,7 +261,7 @@ export default function Kutuphane({ sources = [], error }) {
                           style={{
                             display: 'flex',
                             flexDirection: 'column',
-                            justify: 'space-between',
+                            justifyContent: 'space-between',
                             padding: '16px',
                             minHeight: '150px',
                           }}
@@ -301,7 +300,7 @@ export default function Kutuphane({ sources = [], error }) {
                             </div>
 
                             {s.pdf_url && (
-                              
+                              <a
                                 href={s.pdf_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
