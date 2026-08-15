@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/supabaseClient';
 
@@ -8,6 +8,15 @@ export default function Kutuphane({ sources = [], error }) {
   const [yilBaslangic, setYilBaslangic] = useState('');
   const [yilBitis, setYilBitis] = useState('');
   const [selectedDil, setSelectedDil] = useState('Tümü');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkWidth = () => setIsMobile(window.innerWidth < 800);
+    checkWidth();
+    window.addEventListener('resize', checkWidth);
+    return () => window.removeEventListener('resize', checkWidth);
+  }, []);
 
   const getSourceCategories = (source) => {
     if (!source.kategori) return [];
@@ -61,6 +70,8 @@ export default function Kutuphane({ sources = [], error }) {
   }, [sources]);
 
   const filteredSources = useMemo(() => {
+    const q = searchQuery.trim().toLocaleLowerCase('tr');
+
     const filtered = sources.filter((s) => {
       const cats = getSourceCategories(s);
       const subs = getSourceSubCategories(s);
@@ -72,11 +83,17 @@ export default function Kutuphane({ sources = [], error }) {
       const matchesYilBaslangic = !yilBaslangic || (!isNaN(yil) && yil >= parseInt(yilBaslangic, 10));
       const matchesYilBitis = !yilBitis || (!isNaN(yil) && yil <= parseInt(yilBitis, 10));
 
-      return matchesCategory && matchesSubCategory && matchesDil && matchesYilBaslangic && matchesYilBitis;
+      const matchesSearch =
+        !q ||
+        (s.baslik || '').toLocaleLowerCase('tr').includes(q) ||
+        (s.yazar || '').toLocaleLowerCase('tr').includes(q) ||
+        (s.cevirmen || '').toLocaleLowerCase('tr').includes(q);
+
+      return matchesCategory && matchesSubCategory && matchesDil && matchesYilBaslangic && matchesYilBitis && matchesSearch;
     });
 
     return filtered.sort((a, b) => (a.baslik || '').localeCompare(b.baslik || '', 'tr'));
-  }, [sources, selectedCategory, selectedSubCategory, selectedDil, yilBaslangic, yilBitis]);
+  }, [sources, selectedCategory, selectedSubCategory, selectedDil, yilBaslangic, yilBitis, searchQuery]);
 
   return (
     <Layout>
@@ -96,202 +113,221 @@ export default function Kutuphane({ sources = [], error }) {
           )}
 
           {!error && sources.length > 0 && (
-            <div style={{ display: 'flex', gap: '28px', alignItems: 'flex-start' }}>
-              {/* SOL SIDEBAR */}
-              <aside style={{ width: '220px', flexShrink: 0 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '24px' }}>
-                  {categoriesWithCounts.map(({ name, count }) => (
-                    <div key={name}>
-                      <button
-                        onClick={() => {
-                          setSelectedCategory(name);
-                          setSelectedSubCategory('Tümü');
-                        }}
-                        style={{
-                          width: '100%',
-                          textAlign: 'left',
-                          padding: '6px 12px',
-                          borderRadius: '4px',
-                          border: '1px solid ' + (selectedCategory === name ? 'var(--gold)' : 'transparent'),
-                          backgroundColor: selectedCategory === name ? 'rgba(183, 138, 52, 0.15)' : 'transparent',
-                          color: selectedCategory === name ? 'var(--gold-bright)' : 'var(--parchment)',
-                          cursor: 'pointer',
-                          fontFamily: 'var(--font-mono)',
-                          fontSize: '0.72rem',
-                          transition: 'all 0.2s ease',
-                        }}
-                      >
-                        {name} <span style={{ opacity: 0.6 }}>({count})</span>
-                      </button>
+            <>
+              {/* ARAMA ÇUBUĞU */}
+              <div style={{ marginBottom: '24px' }}>
+                <input
+                  type="text"
+                  placeholder="Eser adı veya yazar ara..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    fontSize: '0.85rem',
+                    borderRadius: '6px',
+                    border: '1px solid var(--line)',
+                    background: 'rgba(255,255,255,0.03)',
+                    color: 'var(--parchment)',
+                  }}
+                />
+              </div>
 
-                      {selectedCategory === name && subCategoriesWithCounts.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '28px', alignItems: 'flex-start' }}>
+                {/* SOL SIDEBAR */}
+                <aside style={{ width: isMobile ? '100%' : '220px', flexShrink: 0 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '24px' }}>
+                    {categoriesWithCounts.map(({ name, count }) => (
+                      <div key={name}>
+                        <button
+                          onClick={() => {
+                            setSelectedCategory(name);
+                            setSelectedSubCategory('Tümü');
+                          }}
+                          style={{
+                            width: '100%',
+                            textAlign: 'left',
+                            padding: '6px 12px',
+                            borderRadius: '4px',
+                            border: '1px solid ' + (selectedCategory === name ? 'var(--gold)' : 'transparent'),
+                            backgroundColor: selectedCategory === name ? 'rgba(183, 138, 52, 0.15)' : 'transparent',
+                            color: selectedCategory === name ? 'var(--gold-bright)' : 'var(--parchment)',
+                            cursor: 'pointer',
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: '0.72rem',
+                            transition: 'all 0.2s ease',
+                          }}
+                        >
+                          {name} <span style={{ opacity: 0.6 }}>({count})</span>
+                        </button>
+
+                        {selectedCategory === name && subCategoriesWithCounts.length > 0 && (
+                          <div
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '3px',
+                              marginTop: '4px',
+                              marginBottom: '4px',
+                              paddingLeft: '10px',
+                              borderLeft: '1px solid var(--gold)',
+                            }}
+                          >
+                            {subCategoriesWithCounts.map((sub) => (
+                              <button
+                                key={sub.name}
+                                onClick={() => setSelectedSubCategory(sub.name)}
+                                style={{
+                                  textAlign: 'left',
+                                  padding: '3px 8px',
+                                  borderRadius: '3px',
+                                  border: 'none',
+                                  backgroundColor: selectedSubCategory === sub.name ? 'rgba(183, 138, 52, 0.25)' : 'transparent',
+                                  color: selectedSubCategory === sub.name ? 'var(--gold-bright)' : 'var(--parchment-dim)',
+                                  cursor: 'pointer',
+                                  fontFamily: 'var(--font-mono)',
+                                  fontSize: '0.68rem',
+                                }}
+                              >
+                                {sub.name} <span style={{ opacity: 0.6 }}>({sub.count})</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* FİLTRELER */}
+                  <div style={{ borderTop: '1px solid var(--line)', paddingTop: '14px' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.68rem', opacity: 0.6, marginBottom: '8px' }}>
+                      FİLTRELER
+                    </div>
+
+                    <div style={{ marginBottom: '12px' }}>
+                      <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: '4px' }}>Yıl Aralığı</label>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <input
+                          type="number"
+                          placeholder="Başlangıç"
+                          value={yilBaslangic}
+                          onChange={(e) => setYilBaslangic(e.target.value)}
+                          style={{ width: '50%', fontSize: '0.7rem', padding: '4px 6px' }}
+                        />
+                        <input
+                          type="number"
+                          placeholder="Bitiş"
+                          value={yilBitis}
+                          onChange={(e) => setYilBitis(e.target.value)}
+                          style={{ width: '50%', fontSize: '0.7rem', padding: '4px 6px' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: '4px' }}>Dil</label>
+                      <select
+                        value={selectedDil}
+                        onChange={(e) => setSelectedDil(e.target.value)}
+                        style={{ width: '100%', fontSize: '0.7rem', padding: '4px 6px' }}
+                      >
+                        {dilOptions.map((d) => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </aside>
+
+                {/* SAĞ: Kompakt Kartlar */}
+                <div style={{ flex: 1, width: '100%' }}>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(280px, 1fr))',
+                      gap: '16px',
+                    }}
+                  >
+                    {filteredSources.map((s) => {
+                      const cats = getSourceCategories(s);
+                      const subs = getSourceSubCategories(s);
+                      return (
                         <div
+                          className="card"
+                          key={s.id}
                           style={{
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: '3px',
-                            marginTop: '4px',
-                            marginBottom: '4px',
-                            paddingLeft: '10px',
-                            borderLeft: '1px solid var(--gold)',
+                            justify: 'space-between',
+                            padding: '16px',
+                            minHeight: '150px',
                           }}
                         >
-                          {subCategoriesWithCounts.map((sub) => (
-                            <button
-                              key={sub.name}
-                              onClick={() => setSelectedSubCategory(sub.name)}
-                              style={{
-                                textAlign: 'left',
-                                padding: '3px 8px',
-                                borderRadius: '3px',
-                                border: 'none',
-                                backgroundColor: selectedSubCategory === sub.name ? 'rgba(183, 138, 52, 0.25)' : 'transparent',
-                                color: selectedSubCategory === sub.name ? 'var(--gold-bright)' : 'var(--parchment-dim)',
-                                cursor: 'pointer',
-                                fontFamily: 'var(--font-mono)',
-                                fontSize: '0.68rem',
-                              }}
-                            >
-                              {sub.name} <span style={{ opacity: 0.6 }}>({sub.count})</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                          <div>
+                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                              {cats.map((cat, idx) => (
+                                <span className="tag" key={idx} style={{ fontSize: '0.62rem', padding: '2px 6px' }}>{cat}</span>
+                              ))}
+                              {subs.map((sub, idx) => (
+                                <span
+                                  className="tag"
+                                  key={'sub-' + idx}
+                                  style={{
+                                    fontSize: '0.62rem',
+                                    padding: '2px 6px',
+                                    opacity: 0.7,
+                                    borderColor: 'var(--line-strong)',
+                                    color: 'var(--parchment-dim)',
+                                  }}
+                                >
+                                  {sub}
+                                </span>
+                              ))}
+                            </div>
 
-                {/* FİLTRELER */}
-                <div style={{ borderTop: '1px solid var(--line)', paddingTop: '14px' }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.68rem', opacity: 0.6, marginBottom: '8px' }}>
-                    FİLTRELER
-                  </div>
+                            <h3 style={{ fontSize: '0.95rem', lineHeight: '1.3', marginBottom: '6px' }}>{s.baslik}</h3>
+                          </div>
 
-                  <div style={{ marginBottom: '12px' }}>
-                    <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: '4px' }}>Yıl Aralığı</label>
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      <input
-                        type="number"
-                        placeholder="Başlangıç"
-                        value={yilBaslangic}
-                        onChange={(e) => setYilBaslangic(e.target.value)}
-                        style={{ width: '50%', fontSize: '0.7rem', padding: '4px 6px' }}
-                      />
-                      <input
-                        type="number"
-                        placeholder="Bitiş"
-                        value={yilBitis}
-                        onChange={(e) => setYilBitis(e.target.value)}
-                        style={{ width: '50%', fontSize: '0.7rem', padding: '4px 6px' }}
-                      />
-                    </div>
-                  </div>
+                          <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '8px' }}>
+                            <div className="meta" style={{ fontSize: '0.72rem', margin: 0 }}>
+                              {s.yazar}
+                              {s.cevirmen ? ' (Çev: ' + s.cevirmen + ')' : ''}
+                              {s.yil ? ' · ' + s.yil : ''}
+                              {s.tip ? ' · ' + s.tip : ''}
+                            </div>
 
-                  <div>
-                    <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: '4px' }}>Dil</label>
-                    <select
-                      value={selectedDil}
-                      onChange={(e) => setSelectedDil(e.target.value)}
-                      style={{ width: '100%', fontSize: '0.7rem', padding: '4px 6px' }}
-                    >
-                      {dilOptions.map((d) => (
-                        <option key={d} value={d}>{d}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </aside>
-
-              {/* SAĞ: Kompakt Kartlar */}
-              <div style={{ flex: 1 }}>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                    gap: '16px',
-                  }}
-                >
-                  {filteredSources.map((s) => {
-                    const cats = getSourceCategories(s);
-                    const subs = getSourceSubCategories(s);
-                    return (
-                      <div
-                        className="card"
-                        key={s.id}
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justify: 'space-between',
-                          padding: '16px',
-                          minHeight: '150px',
-                        }}
-                      >
-                        <div>
-                          {/* Etiketler */}
-                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                            {cats.map((cat, idx) => (
-                              <span className="tag" key={idx} style={{ fontSize: '0.62rem', padding: '2px 6px' }}>{cat}</span>
-                            ))}
-                            {subs.map((sub, idx) => (
-                              <span
-                                className="tag"
-                                key={'sub-' + idx}
+                            {s.pdf_url && (
+                              
+                                href={s.pdf_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 style={{
-                                  fontSize: '0.62rem',
-                                  padding: '2px 6px',
-                                  opacity: 0.7,
-                                  borderColor: 'var(--line-strong)',
-                                  color: 'var(--parchment-dim)',
+                                  fontSize: '0.68rem',
+                                  fontFamily: 'var(--font-mono)',
+                                  color: 'var(--gold-bright)',
+                                  textDecoration: 'none',
+                                  borderBottom: '1px dashed var(--gold)',
+                                  whiteSpace: 'nowrap',
+                                  paddingBottom: '1px',
                                 }}
                               >
-                                {sub}
-                              </span>
-                            ))}
+                                PDF ↗
+                              </a>
+                            )}
                           </div>
-
-                          <h3 style={{ fontSize: '0.95rem', lineHeight: '1.3', marginBottom: '6px' }}>{s.baslik}</h3>
                         </div>
+                      );
+                    })}
+                  </div>
 
-                        {/* Yazar Bilgisi ve PDF Bağlantısı */}
-                        <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '8px' }}>
-                          <div className="meta" style={{ fontSize: '0.72rem', margin: 0 }}>
-                            {s.yazar}
-                            {s.cevirmen ? ' (Çev: ' + s.cevirmen + ')' : ''}
-                            {s.yil ? ' · ' + s.yil : ''}
-                            {s.tip ? ' · ' + s.tip : ''}
-                          </div>
-
-                          {s.pdf_url && (
-                            <a
-                              href={s.pdf_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{
-                                fontSize: '0.68rem',
-                                fontFamily: 'var(--font-mono)',
-                                color: 'var(--gold-bright)',
-                                textDecoration: 'none',
-                                borderBottom: '1px dashed var(--gold)',
-                                whiteSpace: 'nowrap',
-                                paddingBottom: '1px',
-                              }}
-                            >
-                              PDF ↗
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {!error && sources.length > 0 && filteredSources.length === 0 && (
+                    <p className="status" style={{ marginTop: 20 }}>
+                      Bu kriterlere uyan bir kaynak bulunmuyor.
+                    </p>
+                  )}
                 </div>
-
-                {!error && sources.length > 0 && filteredSources.length === 0 && (
-                  <p className="status" style={{ marginTop: 20 }}>
-                    Bu kategoride henüz bir kaynak bulunmuyor.
-                  </p>
-                )}
               </div>
-            </div>
+            </>
           )}
         </div>
       </section>
