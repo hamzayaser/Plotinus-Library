@@ -104,7 +104,6 @@ export default function Kutuphane({ sources = [], error }) {
                     <div key={name}>
                       <button
                         onClick={() => {
-                          const next = selectedCategory === name && name !== 'Tümü' ? name : name;
                           setSelectedCategory(name);
                           setSelectedSubCategory('Tümü');
                         }}
@@ -227,7 +226,7 @@ export default function Kutuphane({ sources = [], error }) {
                           <h3>{s.baslik}</h3>
                           <div className="meta">
                             {s.yazar}
-                            {s.cevirmen ? ' (Cev: ' + s.cevirmen + ')' : ''}
+                            {s.cevirmen ? ' (Çev: ' + s.cevirmen + ')' : ''}
                             {s.yil ? ' · ' + s.yil : ''}
                             {s.tip ? ' · ' + s.tip : ''}
                           </div>
@@ -235,7 +234,7 @@ export default function Kutuphane({ sources = [], error }) {
 
                         {s.pdf_url && (
                           <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--line)' }}>
-                            
+                            <a
                               href={s.pdf_url}
                               target="_blank"
                               rel="noopener noreferrer"
