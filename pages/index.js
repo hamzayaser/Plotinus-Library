@@ -11,9 +11,7 @@ export default function Home() {
           Bir'den <em>Tüm'e</em>,<br /> taşan ışığın izinde
         </h1>
         <p className="lead">
-          Plotinos, Porphyrios ve Neoplatonik gelenek üzerine bir araştırma
-          kütüphanesi. Kaynaklar, notlar ve Via Plotin denemeleri tek çatı
-          altında.
+          Plotinos Kütüphanesi, başta Enneadlar olmak üzere, Plotinos düşüncesi üzerine hazırlanmış kitap, tez ve makalelerden müteşekkil kaynakçamıza erişim sağlayan bir portal sunmaktadır.
         </p>
       </section>
 
@@ -21,14 +19,13 @@ export default function Home() {
         <div className="container">
           <div className="section-head">
             <div className="eyebrow">Keşfet</div>
-            <h2>Nereden başlamalı</h2>
-          </div>
+      
           <div className="grid grid-2">
             <Link href="/kutuphane" className="card">
               <span className="tag">Kaynaklar</span>
               <h3>Kütüphane</h3>
               <p className="desc">
-                Enneads başta olmak üzere temel metinler, kategori ve yazara
+                Enneadlar başta olmak üzere temel metinler, kategori ve yazara
                 göre düzenlenmiş kaynak listesi.
               </p>
             </Link>
@@ -36,7 +33,7 @@ export default function Home() {
               <span className="tag">Deneme</span>
               <h3>Via Plotin</h3>
               <p className="desc">
-                Plotinos ve Neoplatonizm üzerine araştırma notları ve uzun
+                Plotinos üzerine araştırma notları ve uzun
                 soluklu denemeler.
               </p>
             </Link>
@@ -45,7 +42,7 @@ export default function Home() {
               <h3>İletişim</h3>
               <p className="desc">
                 Sorularınız, katkılarınız ya da işbirliği önerileriniz için
-                iletisim bilgileri.
+                iletişim bilgileri.
               </p>
             </Link>
           </div>
