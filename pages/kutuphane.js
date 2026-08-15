@@ -95,6 +95,17 @@ export default function Kutuphane({ sources = [], error }) {
     return filtered.sort((a, b) => (a.baslik || '').localeCompare(b.baslik || '', 'tr'));
   }, [sources, selectedCategory, selectedSubCategory, selectedDil, yilBaslangic, yilBitis, searchQuery]);
 
+  const handleCategoryClick = (name) => {
+    if (selectedCategory === name && name !== 'Tümü') {
+      // Aynı kategoriye tekrar tıklanınca alt kategoriler kapanır
+      setSelectedCategory('Tümü');
+      setSelectedSubCategory('Tümü');
+    } else {
+      setSelectedCategory(name);
+      setSelectedSubCategory('Tümü');
+    }
+  };
+
   return (
     <Layout>
       <section className="hero" style={{ paddingBottom: 20 }}>
@@ -114,7 +125,6 @@ export default function Kutuphane({ sources = [], error }) {
 
           {!error && sources.length > 0 && (
             <>
-              {/* ARAMA ÇUBUĞU */}
               <div style={{ marginBottom: '24px' }}>
                 <input
                   type="text"
@@ -134,16 +144,12 @@ export default function Kutuphane({ sources = [], error }) {
               </div>
 
               <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '28px', alignItems: 'flex-start' }}>
-                {/* SOL SIDEBAR */}
                 <aside style={{ width: isMobile ? '100%' : '220px', flexShrink: 0 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '24px' }}>
                     {categoriesWithCounts.map(({ name, count }) => (
                       <div key={name}>
                         <button
-                          onClick={() => {
-                            setSelectedCategory(name);
-                            setSelectedSubCategory('Tümü');
-                          }}
+                          onClick={() => handleCategoryClick(name)}
                           style={{
                             width: '100%',
                             textAlign: 'left',
@@ -198,7 +204,6 @@ export default function Kutuphane({ sources = [], error }) {
                     ))}
                   </div>
 
-                  {/* FİLTRELER */}
                   <div style={{ borderTop: '1px solid var(--line)', paddingTop: '14px' }}>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.68rem', opacity: 0.6, marginBottom: '8px' }}>
                       FİLTRELER
@@ -239,7 +244,6 @@ export default function Kutuphane({ sources = [], error }) {
                   </div>
                 </aside>
 
-                {/* SAĞ: Kompakt Kartlar */}
                 <div style={{ flex: 1, width: '100%' }}>
                   <div
                     style={{
