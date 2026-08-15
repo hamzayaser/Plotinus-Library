@@ -17,9 +17,6 @@ export default function Home() {
 
       <section className="section">
         <div className="container">
-          <div className="section-head">
-            <div className="eyebrow">Keşfet</div>
-      
           <div className="grid grid-2">
             <Link href="/kutuphane" className="card">
               <span className="tag">Kaynaklar</span>
@@ -33,8 +30,7 @@ export default function Home() {
               <span className="tag">Deneme</span>
               <h3>Via Plotin</h3>
               <p className="desc">
-                Plotinos üzerine araştırma notları ve uzun
-                soluklu denemeler.
+                Plotinos üzerine araştırma notları ve uzun soluklu denemeler.
               </p>
             </Link>
             <Link href="/iletisim" className="card">
