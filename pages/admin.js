@@ -177,7 +177,7 @@ function MultiSelectDropdown({ selected, onChange, options, placeholder }) {
           color: selected.length ? 'var(--parchment, #fff)' : 'var(--parchment-dim, #999)',
           cursor: options.length === 0 ? 'not-allowed' : 'pointer',
           display: 'flex',
-          justifyContent: 'space-between',
+          justifySpace: 'space-between',
           alignItems: 'center',
           fontSize: '0.85rem',
           opacity: options.length === 0 ? 0.5 : 1,
@@ -194,7 +194,7 @@ function MultiSelectDropdown({ selected, onChange, options, placeholder }) {
             top: 'calc(100% + 6px)',
             left: 0,
             right: 0,
-            zIndex: 30,
+            zIndex: 100,
             background: 'var(--ink, #14100c)',
             border: '1px solid var(--gold, #d4af37)',
             borderRadius: '8px',
@@ -230,91 +230,16 @@ function MultiSelectDropdown({ selected, onChange, options, placeholder }) {
   );
 }
 
-function SourcesAdmin({ password }) {
-  const [sources, setSources] = useState([]);
-  const [form, setForm] = useState(EMPTY_SOURCE);
-  const [editingId, setEditingId] = useState(null);
-  const [status, setStatus] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [showAllSources, setShowAllSources] = useState(false);
-
-  async function load() {
-    setLoading(true);
-    const res = await fetch('/api/admin/sources', { headers: authHeaders(password) });
-    if (res.ok) setSources(await res.json());
-    setLoading(false);
-  }
-
-  useEffect(() => { load(); }, []); // eslint-disable-line
-
+// ---------------------------------------------------------------
+// TEKRAR KULLANILABİLİR YAYIN/KAYNAK FORMU COMPONENTİ
+// ---------------------------------------------------------------
+function SourceFormFields({ form, setForm, handleSubmit, status, editingId, onCancel }) {
   const availableSubCats = useMemo(() => {
     const cats = Array.isArray(form.kategori) ? form.kategori : [];
     const set = new Set();
     cats.forEach((cat) => (TAXONOMY[cat] || []).forEach((sub) => set.add(sub)));
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'tr'));
   }, [form.kategori]);
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setStatus(null);
-    const method = editingId ? 'PUT' : 'POST';
-
-    const payload = {
-      ...form,
-      kategori: Array.isArray(form.kategori) ? form.kategori.join(', ') : form.kategori,
-      alt_kategori: Array.isArray(form.alt_kategori) ? form.alt_kategori.join(', ') : form.alt_kategori,
-    };
-
-    const body = editingId ? { id: editingId, ...payload } : payload;
-    const res = await fetch('/api/admin/sources', {
-      method,
-      headers: authHeaders(password),
-      body: JSON.stringify(body),
-    });
-    if (res.ok) {
-      setStatus({ ok: true, msg: editingId ? 'Güncellendi.' : 'Eklendi.' });
-      setForm(EMPTY_SOURCE);
-      setEditingId(null);
-      load();
-    } else {
-      const err = await res.json();
-      setStatus({ ok: false, msg: err.error || 'Hata oluştu.' });
-    }
-  }
-
-  function startEdit(s) {
-    setEditingId(s.id);
-    let cats = [];
-    if (Array.isArray(s.kategori)) cats = s.kategori;
-    else if (typeof s.kategori === 'string') cats = s.kategori.split(',').map((c) => c.trim()).filter(Boolean);
-
-    let subs = [];
-    if (Array.isArray(s.alt_kategori)) subs = s.alt_kategori;
-    else if (typeof s.alt_kategori === 'string') subs = s.alt_kategori.split(',').map((c) => c.trim()).filter(Boolean);
-
-    setForm({
-      baslik: s.baslik || '',
-      kategori: cats,
-      alt_kategori: subs,
-      yazar: s.yazar || '',
-      cevirmen: s.cevirmen || '',
-      yil: s.yil || '',
-      tip: s.tip || '',
-      dil: s.dil || '',
-      yayin_bilgisi: s.yayin_bilgisi || '',
-      aciklama: s.aciklama || '',
-      pdf_url: s.pdf_url || '',
-    });
-  }
-
-  async function handleDelete(id) {
-    if (!confirm('Bu kaynağı silmek istediğine emin misin?')) return;
-    const res = await fetch(`/api/admin/sources?id=${id}`, {
-      method: 'DELETE',
-      headers: authHeaders(password),
-    });
-    if (res.ok) load();
-  }
 
   const handleCategoryChange = (next) => {
     const cats = next;
@@ -328,95 +253,221 @@ function SourcesAdmin({ password }) {
     });
   };
 
-  const displayedSources = showAllSources ? sources : sources.slice(0, 3);
-
   return (
-    <div className="admin-section">
-      <h2 style={{ fontFamily: 'var(--font-display)', marginTop: 0 }}>Kaynaklar (sources)</h2>
+    <form onSubmit={handleSubmit}>
+      <div className="field">
+        <label>Başlık</label>
+        <input value={form.baslik} onChange={(e) => setForm({ ...form, baslik: e.target.value })} required />
+      </div>
 
-      <form onSubmit={handleSubmit}>
-        <div className="field">
-          <label>Başlık</label>
-          <input value={form.baslik} onChange={(e) => setForm({ ...form, baslik: e.target.value })} required />
+      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: 12 }}>
+        <div className="field" style={{ flex: '1 1 160px', margin: 0 }}>
+          <label>Yazar</label>
+          <input value={form.yazar} onChange={(e) => setForm({ ...form, yazar: e.target.value })} />
         </div>
-
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: 12 }}>
-          <div className="field" style={{ flex: '1 1 160px', margin: 0 }}>
-            <label>Yazar</label>
-            <input value={form.yazar} onChange={(e) => setForm({ ...form, yazar: e.target.value })} />
-          </div>
-          <div className="field" style={{ flex: '1 1 160px', margin: 0 }}>
-            <label>Çevirmen</label>
-            <input value={form.cevirmen} onChange={(e) => setForm({ ...form, cevirmen: e.target.value })} />
-          </div>
-          <div className="field" style={{ flex: '0 1 90px', margin: 0 }}>
-            <label>Yıl</label>
-            <input value={form.yil} onChange={(e) => setForm({ ...form, yil: e.target.value })} />
-          </div>
-          <div className="field" style={{ flex: '1 1 140px', margin: 0 }}>
-            <label>Tip</label>
-            <input value={form.tip} onChange={(e) => setForm({ ...form, tip: e.target.value })} placeholder="Makale, Kitap..." />
-          </div>
-          <div className="field" style={{ flex: '0 1 130px', margin: 0 }}>
-            <label>Dil</label>
-            <select value={form.dil} onChange={(e) => setForm({ ...form, dil: e.target.value })}>
-              <option value="">-- Seç --</option>
-              <option value="Türkçe">Türkçe</option>
-              <option value="İngilizce">İngilizce</option>
-            </select>
-          </div>
+        <div className="field" style={{ flex: '1 1 160px', margin: 0 }}>
+          <label>Çevirmen</label>
+          <input value={form.cevirmen} onChange={(e) => setForm({ ...form, cevirmen: e.target.value })} />
         </div>
+        <div className="field" style={{ flex: '0 1 90px', margin: 0 }}>
+          <label>Yıl</label>
+          <input value={form.yil} onChange={(e) => setForm({ ...form, yil: e.target.value })} />
+        </div>
+        <div className="field" style={{ flex: '1 1 140px', margin: 0 }}>
+          <label>Tip</label>
+          <input value={form.tip} onChange={(e) => setForm({ ...form, tip: e.target.value })} placeholder="Makale, Kitap..." />
+        </div>
+        <div className="field" style={{ flex: '0 1 130px', margin: 0 }}>
+          <label>Dil</label>
+          <select value={form.dil} onChange={(e) => setForm({ ...form, dil: e.target.value })}>
+            <option value="">-- Seç --</option>
+            <option value="Türkçe">Türkçe</option>
+            <option value="İngilizce">İngilizce</option>
+            <option value="Almanca">Almanca</option>
+            <option value="Fransızca">Fransızca</option>
+            <option value="Arapça">Arapça</option>
+            <option value="Yunanca">Yunanca</option>
+          </select>
+        </div>
+      </div>
 
-        <div className="field" style={{ marginTop: 12 }}>
-          <label>Yayın Bilgisi (Yayınevi / Dergi, Sayı vb.)</label>
-          <input
-            value={form.yayin_bilgisi}
-            onChange={(e) => setForm({ ...form, yayin_bilgisi: e.target.value })}
-            placeholder="Örn: İş Bankası Kültür Yayınları — veya — Kaygı Dergisi, Sayı 12"
+      <div className="field" style={{ marginTop: 12 }}>
+        <label>Yayın Bilgisi (Yayınevi / Dergi, Sayı vb.)</label>
+        <input
+          value={form.yayin_bilgisi}
+          onChange={(e) => setForm({ ...form, yayin_bilgisi: e.target.value })}
+          placeholder="Örn: İş Bankası Kültür Yayınları — veya — Kaygı Dergisi, Sayı 12"
+        />
+      </div>
+
+      <div style={{ display: 'flex', gap: '10px', marginTop: 12, flexWrap: 'wrap' }}>
+        <div className="field" style={{ flex: '1 1 220px', margin: 0 }}>
+          <label>Kategoriler</label>
+          <MultiSelectDropdown
+            selected={Array.isArray(form.kategori) ? form.kategori : []}
+            onChange={handleCategoryChange}
+            options={Object.keys(TAXONOMY)}
+            placeholder="-- Kategori Seç --"
           />
         </div>
-
-        <div style={{ display: 'flex', gap: '10px', marginTop: 12, flexWrap: 'wrap' }}>
-          <div className="field" style={{ flex: '1 1 220px', margin: 0 }}>
-            <label>Kategoriler</label>
-            <MultiSelectDropdown
-              selected={Array.isArray(form.kategori) ? form.kategori : []}
-              onChange={handleCategoryChange}
-              options={Object.keys(TAXONOMY)}
-              placeholder="-- Kategori Seç --"
-            />
-          </div>
-          <div className="field" style={{ flex: '1 1 220px', margin: 0 }}>
-            <label>Alt Kategoriler</label>
-            <MultiSelectDropdown
-              selected={Array.isArray(form.alt_kategori) ? form.alt_kategori : []}
-              onChange={(next) => setForm({ ...form, alt_kategori: next })}
-              options={availableSubCats}
-              placeholder={availableSubCats.length === 0 ? 'Önce kategori seçin' : '-- Alt Kategori Seç --'}
-            />
-          </div>
+        <div className="field" style={{ flex: '1 1 220px', margin: 0 }}>
+          <label>Alt Kategoriler</label>
+          <MultiSelectDropdown
+            selected={Array.isArray(form.alt_kategori) ? form.alt_kategori : []}
+            onChange={(next) => setForm({ ...form, alt_kategori: next })}
+            options={availableSubCats}
+            placeholder={availableSubCats.length === 0 ? 'Önce kategori seçin' : '-- Alt Kategori Seç --'}
+          />
         </div>
+      </div>
 
-        <div className="field" style={{ marginTop: 12 }}>
-          <label>PDF Bağlantısı (URL)</label>
-          <input type="url" placeholder="https://..." value={form.pdf_url} onChange={(e) => setForm({ ...form, pdf_url: e.target.value })} />
-        </div>
+      <div className="field" style={{ marginTop: 12 }}>
+        <label>PDF Bağlantısı (URL)</label>
+        <input type="url" placeholder="https://..." value={form.pdf_url} onChange={(e) => setForm({ ...form, pdf_url: e.target.value })} />
+      </div>
 
-        <div className="field">
-          <label>Açıklama</label>
-          <textarea value={form.aciklama} onChange={(e) => setForm({ ...form, aciklama: e.target.value })} />
-        </div>
+      <div className="field">
+        <label>Açıklama</label>
+        <textarea value={form.aciklama} onChange={(e) => setForm({ ...form, aciklama: e.target.value })} />
+      </div>
 
+      <div style={{ marginTop: 16 }}>
         <button className="btn" type="submit">{editingId ? 'Güncelle' : 'Ekle'}</button>
         {editingId && (
-          <button type="button" className="btn secondary" style={{ marginLeft: 10 }} onClick={() => { setEditingId(null); setForm(EMPTY_SOURCE); }}>
+          <button type="button" className="btn secondary" style={{ marginLeft: 10 }} onClick={onCancel}>
             İptal
           </button>
         )}
-        {status && <p className={`status ${status.ok ? 'ok' : 'err'}`}>{status.msg}</p>}
-      </form>
+      </div>
+      {status && <p className={`status ${status.ok ? 'ok' : 'err'}`}>{status.msg}</p>}
+    </form>
+  );
+}
 
-      <div style={{ marginTop: 24 }}>
+function SourcesAdmin({ password }) {
+  const [sources, setSources] = useState([]);
+  const [addForm, setAddForm] = useState(EMPTY_SOURCE);
+  const [editForm, setEditForm] = useState(EMPTY_SOURCE);
+  const [editingId, setEditingId] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [status, setStatus] = useState(null);
+  const [modalStatus, setModalStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [showAllSources, setShowAllSources] = useState(false);
+
+  async function load() {
+    setLoading(true);
+    const res = await fetch('/api/admin/sources', { headers: authHeaders(password) });
+    if (res.ok) setSources(await res.json());
+    setLoading(false);
+  }
+
+  useEffect(() => { load(); }, []); // eslint-disable-line
+
+  async function handleAddSubmit(e) {
+    e.preventDefault();
+    setStatus(null);
+    const payload = {
+      ...addForm,
+      kategori: Array.isArray(addForm.kategori) ? addForm.kategori.join(', ') : addForm.kategori,
+      alt_kategori: Array.isArray(addForm.alt_kategori) ? addForm.alt_kategori.join(', ') : addForm.alt_kategori,
+    };
+
+    const res = await fetch('/api/admin/sources', {
+      method: 'POST',
+      headers: authHeaders(password),
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      setStatus({ ok: true, msg: 'Yeni eser eklendi.' });
+      setAddForm(EMPTY_SOURCE);
+      load();
+    } else {
+      const err = await res.json();
+      setStatus({ ok: false, msg: err.error || 'Hata oluştu.' });
+    }
+  }
+
+  async function handleEditSubmit(e) {
+    e.preventDefault();
+    setModalStatus(null);
+    const payload = {
+      ...editForm,
+      kategori: Array.isArray(editForm.kategori) ? editForm.kategori.join(', ') : editForm.kategori,
+      alt_kategori: Array.isArray(editForm.alt_kategori) ? editForm.alt_kategori.join(', ') : editForm.alt_kategori,
+    };
+
+    const res = await fetch('/api/admin/sources', {
+      method: 'PUT',
+      headers: authHeaders(password),
+      body: JSON.stringify({ id: editingId, ...payload }),
+    });
+    if (res.ok) {
+      setModalStatus({ ok: true, msg: 'Başarıyla güncellendi.' });
+      setTimeout(() => {
+        setIsModalOpen(false);
+        setEditingId(null);
+        setEditForm(EMPTY_SOURCE);
+        setModalStatus(null);
+        load();
+      }, 600);
+    } else {
+      const err = await res.json();
+      setModalStatus({ ok: false, msg: err.error || 'Hata oluştu.' });
+    }
+  }
+
+  function startEdit(s) {
+    setEditingId(s.id);
+    let cats = [];
+    if (Array.isArray(s.kategori)) cats = s.kategori;
+    else if (typeof s.kategori === 'string') cats = s.kategori.split(',').map((c) => c.trim()).filter(Boolean);
+
+    let subs = [];
+    if (Array.isArray(s.alt_kategori)) subs = s.alt_kategori;
+    else if (typeof s.alt_kategori === 'string') subs = s.alt_kategori.split(',').map((c) => c.trim()).filter(Boolean);
+
+    setEditForm({
+      baslik: s.baslik || '',
+      kategori: cats,
+      alt_kategori: subs,
+      yazar: s.yazar || '',
+      cevirmen: s.cevirmen || '',
+      yil: s.yil || '',
+      tip: s.tip || '',
+      dil: s.dil || '',
+      yayin_bilgisi: s.yayin_bilgisi || '',
+      aciklama: s.aciklama || '',
+      pdf_url: s.pdf_url || '',
+    });
+    setIsModalOpen(true);
+  }
+
+  async function handleDelete(id) {
+    if (!confirm('Bu kaynağı silmek istediğine emin misin?')) return;
+    const res = await fetch(`/api/admin/sources?id=${id}`, {
+      method: 'DELETE',
+      headers: authHeaders(password),
+    });
+    if (res.ok) load();
+  }
+
+  const displayedSources = showAllSources ? sources : sources.slice(0, 5);
+
+  return (
+    <div className="admin-section">
+      <h2 style={{ fontFamily: 'var(--font-display)', marginTop: 0 }}>Yeni Kaynak Ekle</h2>
+
+      {/* Yeni Kaynak Ekleme Formu */}
+      <SourceFormFields
+        form={addForm}
+        setForm={setAddForm}
+        handleSubmit={handleAddSubmit}
+        status={status}
+        editingId={null}
+      />
+
+      <div style={{ marginTop: 40 }}>
         <h3>Ekli Kaynaklar ({sources.length})</h3>
         {loading && <p className="status">Yükleniyor...</p>}
         {!loading && displayedSources.map((s) => (
@@ -424,7 +475,7 @@ function SourcesAdmin({ password }) {
             <div>
               <strong>{s.baslik}</strong>
               <div className="meta">
-                {s.yazar} {s.cevirmen ? `(Çev: ${s.cevirmen})` : ''} {s.yil ? `· ${s.yil}` : ''} ·
+                {s.yazar} {s.cevirmen ? `(Çev: ${s.cevirmen})` : ''} {s.yil ? `· ${s.yil}` : ''} {s.dil ? `· ${s.dil}` : ''} ·
                 <span style={{ color: 'var(--color-primary, #c5a059)', marginLeft: 4 }}>
                   [{s.kategori} {s.alt_kategori ? `> ${s.alt_kategori}` : ''}]
                 </span>
@@ -438,7 +489,7 @@ function SourcesAdmin({ password }) {
           </div>
         ))}
 
-        {!loading && sources.length > 3 && (
+        {!loading && sources.length > 5 && (
           <button className="btn secondary" style={{ marginTop: 12, width: '100%' }} onClick={() => setShowAllSources(!showAllSources)}>
             {showAllSources ? 'Listeyi Daralt ▲' : `Tüm Kaynakları Göster (${sources.length}) ▼`}
           </button>
@@ -446,6 +497,55 @@ function SourcesAdmin({ password }) {
 
         {!loading && sources.length === 0 && <p className="status">Henüz kaynak yok.</p>}
       </div>
+
+      {/* DÜZENLEME İÇİN MODAL POP-UP */}
+      {isModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          backdropFilter: 'blur(5px)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: 'var(--ink, #14100c)',
+            border: '1px solid var(--gold, #d4af37)',
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '700px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.8)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontFamily: 'var(--font-display)' }}>Eseri Düzenle</h3>
+              <button 
+                onClick={() => setIsModalOpen(false)} 
+                style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.2rem', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <SourceFormFields
+              form={editForm}
+              setForm={setEditForm}
+              handleSubmit={handleEditSubmit}
+              status={modalStatus}
+              editingId={editingId}
+              onCancel={() => setIsModalOpen(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

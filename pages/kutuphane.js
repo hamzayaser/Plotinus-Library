@@ -11,52 +11,42 @@ export default function Kutuphane({ sources = [], error }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobile, setIsMobile] = useState(false);
 
+  // Sayfalama (Pagination) State'leri
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 12; // Sayfa başına gösterilecek eser sayısı
+
   useEffect(() => {
     const checkWidth = () => setIsMobile(window.innerWidth < 800);
-
     checkWidth();
     window.addEventListener('resize', checkWidth);
-
     return () => window.removeEventListener('resize', checkWidth);
   }, []);
 
+  // Filtreler veya arama terimi değiştiğinde 1. sayfaya geri dön
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, selectedSubCategory, selectedDil, yilBaslangic, yilBitis, searchQuery]);
+
   const getSourceCategories = (source) => {
     if (!source.kategori) return [];
-
-    if (Array.isArray(source.kategori)) {
-      return source.kategori;
-    }
-
+    if (Array.isArray(source.kategori)) return source.kategori;
     if (typeof source.kategori === 'string') {
-      return source.kategori
-        .split(',')
-        .map((c) => c.trim())
-        .filter(Boolean);
+      return source.kategori.split(',').map((c) => c.trim()).filter(Boolean);
     }
-
     return [];
   };
 
   const getSourceSubCategories = (source) => {
     if (!source.alt_kategori) return [];
-
-    if (Array.isArray(source.alt_kategori)) {
-      return source.alt_kategori;
-    }
-
+    if (Array.isArray(source.alt_kategori)) return source.alt_kategori;
     if (typeof source.alt_kategori === 'string') {
-      return source.alt_kategori
-        .split(',')
-        .map((c) => c.trim())
-        .filter(Boolean);
+      return source.alt_kategori.split(',').map((c) => c.trim()).filter(Boolean);
     }
-
     return [];
   };
 
   const categoriesWithCounts = useMemo(() => {
     const counts = {};
-
     sources.forEach((s) => {
       getSourceCategories(s).forEach((cat) => {
         counts[cat] = (counts[cat] || 0) + 1;
@@ -80,7 +70,6 @@ export default function Kutuphane({ sources = [], error }) {
     if (selectedCategory === 'Tümü') return [];
 
     const counts = {};
-
     sources.forEach((s) => {
       if (getSourceCategories(s).includes(selectedCategory)) {
         getSourceSubCategories(s).forEach((sub) => {
@@ -108,8 +97,17 @@ export default function Kutuphane({ sources = [], error }) {
     ];
   }, [sources, selectedCategory]);
 
+  // Dil Seçenekleri (İstediğin diller eklendi + dinamik gelen diğer diller)
   const dilOptions = useMemo(() => {
-    const set = new Set();
+    const predefinedLangs = [
+      'Türkçe',
+      'İngilizce',
+      'Almanca',
+      'Fransızca',
+      'Grekçe',
+      'Arapça',
+    ];
+    const set = new Set(predefinedLangs);
 
     sources.forEach((s) => {
       if (s.dil) set.add(s.dil);
@@ -121,6 +119,7 @@ export default function Kutuphane({ sources = [], error }) {
     ];
   }, [sources]);
 
+  // Filtrelenmiş Sonuçlar (Tüm veritabanı üzerinden süzülür)
   const filteredSources = useMemo(() => {
     const q = searchQuery.trim().toLocaleLowerCase('tr');
 
@@ -129,46 +128,28 @@ export default function Kutuphane({ sources = [], error }) {
       const subs = getSourceSubCategories(s);
 
       const matchesCategory =
-        selectedCategory === 'Tümü' ||
-        cats.includes(selectedCategory);
+        selectedCategory === 'Tümü' || cats.includes(selectedCategory);
 
       const matchesSubCategory =
-        selectedSubCategory === 'Tümü' ||
-        subs.includes(selectedSubCategory);
+        selectedSubCategory === 'Tümü' || subs.includes(selectedSubCategory);
 
       const matchesDil =
-        selectedDil === 'Tümü' ||
-        s.dil === selectedDil;
+        selectedDil === 'Tümü' || s.dil === selectedDil;
 
-      const yilMatch = (s.yil || '')
-        .toString()
-        .match(/\d{3,4}/);
-
-      const yil = yilMatch
-        ? parseInt(yilMatch[0], 10)
-        : NaN;
+      const yilMatch = (s.yil || '').toString().match(/\d{3,4}/);
+      const yil = yilMatch ? parseInt(yilMatch[0], 10) : NaN;
 
       const matchesYilBaslangic =
-        !yilBaslangic ||
-        (!isNaN(yil) &&
-          yil >= parseInt(yilBaslangic, 10));
+        !yilBaslangic || (!isNaN(yil) && yil >= parseInt(yilBaslangic, 10));
 
       const matchesYilBitis =
-        !yilBitis ||
-        (!isNaN(yil) &&
-          yil <= parseInt(yilBitis, 10));
+        !yilBitis || (!isNaN(yil) && yil <= parseInt(yilBitis, 10));
 
       const matchesSearch =
         !q ||
-        (s.baslik || '')
-          .toLocaleLowerCase('tr')
-          .includes(q) ||
-        (s.yazar || '')
-          .toLocaleLowerCase('tr')
-          .includes(q) ||
-        (s.cevirmen || '')
-          .toLocaleLowerCase('tr')
-          .includes(q);
+        (s.baslik || '').toLocaleLowerCase('tr').includes(q) ||
+        (s.yazar || '').toLocaleLowerCase('tr').includes(q) ||
+        (s.cevirmen || '').toLocaleLowerCase('tr').includes(q);
 
       return (
         matchesCategory &&
@@ -181,10 +162,7 @@ export default function Kutuphane({ sources = [], error }) {
     });
 
     return filtered.sort((a, b) =>
-      (a.baslik || '').localeCompare(
-        b.baslik || '',
-        'tr'
-      )
+      (a.baslik || '').localeCompare(b.baslik || '', 'tr')
     );
   }, [
     sources,
@@ -195,6 +173,13 @@ export default function Kutuphane({ sources = [], error }) {
     yilBitis,
     searchQuery,
   ]);
+
+  // Sayfalama Hesaplamaları
+  const totalPages = Math.ceil(filteredSources.length / itemsPerPage);
+  const paginatedSources = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredSources.slice(start, start + itemsPerPage);
+  }, [filteredSources, currentPage, itemsPerPage]);
 
   const handleCategoryClick = (name) => {
     if (selectedCategory === name && name !== 'Tümü') {
@@ -208,35 +193,22 @@ export default function Kutuphane({ sources = [], error }) {
 
   return (
     <Layout>
-      <section
-        className="hero"
-        style={{ paddingBottom: 20 }}
-      >
+      <section className="hero" style={{ paddingBottom: 20 }}>
         <div className="eyebrow">Sources</div>
-
         <h1>Kütüphane</h1>
-
         <p className="lead">
-          Neoplatonik gelenek üzerine temel metinler ve
-          araştırma kaynakları.
+          Neoplatonik gelenek üzerine temel metinler ve araştırma kaynakları.
         </p>
       </section>
 
-      <section
-        className="section"
-        style={{ borderTop: 'none' }}
-      >
+      <section className="section" style={{ borderTop: 'none' }}>
         <div className="container-wide">
           {error && (
-            <p className="status err">
-              Kaynaklar yüklenemedi: {error}
-            </p>
+            <p className="status err">Kaynaklar yüklenemedi: {error}</p>
           )}
 
           {!error && sources.length === 0 && (
-            <p className="status">
-              Henüz kaynak eklenmemiş.
-            </p>
+            <p className="status">Henüz kaynak eklenmemiş.</p>
           )}
 
           {!error && sources.length > 0 && (
@@ -246,17 +218,14 @@ export default function Kutuphane({ sources = [], error }) {
                   type="text"
                   placeholder="Eser adı veya yazar ara..."
                   value={searchQuery}
-                  onChange={(e) =>
-                    setSearchQuery(e.target.value)
-                  }
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   style={{
                     width: '100%',
                     padding: '12px 16px',
                     fontSize: '0.85rem',
                     borderRadius: '6px',
                     border: '1px solid var(--line)',
-                    background:
-                      'rgba(255,255,255,0.03)',
+                    background: 'rgba(255,255,255,0.03)',
                     color: 'var(--parchment)',
                   }}
                 />
@@ -265,18 +234,14 @@ export default function Kutuphane({ sources = [], error }) {
               <div
                 style={{
                   display: 'flex',
-                  flexDirection: isMobile
-                    ? 'column'
-                    : 'row',
+                  flexDirection: isMobile ? 'column' : 'row',
                   gap: '28px',
                   alignItems: 'flex-start',
                 }}
               >
                 <aside
                   style={{
-                    width: isMobile
-                      ? '100%'
-                      : '220px',
+                    width: isMobile ? '100%' : '220px',
                     flexShrink: 0,
                   }}
                 >
@@ -288,121 +253,96 @@ export default function Kutuphane({ sources = [], error }) {
                       marginBottom: '24px',
                     }}
                   >
-                    {categoriesWithCounts.map(
-                      ({ name, count }) => (
-                        <div key={name}>
-                          <button
-                            onClick={() =>
-                              handleCategoryClick(name)
-                            }
-                            style={{
-                              width: '100%',
-                              textAlign: 'left',
-                              padding: '6px 12px',
-                              borderRadius: '4px',
-                              border:
-                                '1px solid ' +
-                                (selectedCategory === name
-                                  ? 'var(--gold)'
-                                  : 'transparent'),
-                              backgroundColor:
-                                selectedCategory === name
-                                  ? 'rgba(183, 138, 52, 0.15)'
-                                  : 'transparent',
-                              color:
-                                selectedCategory === name
-                                  ? 'var(--gold-bright)'
-                                  : 'var(--parchment)',
-                              cursor: 'pointer',
-                              fontFamily:
-                                'var(--font-mono)',
-                              fontSize: '0.72rem',
-                              transition:
-                                'all 0.2s ease',
-                            }}
-                          >
-                            {name}{' '}
-                            <span
-                              style={{ opacity: 0.6 }}
-                            >
-                              ({count})
-                            </span>
-                          </button>
+                    {categoriesWithCounts.map(({ name, count }) => (
+                      <div key={name}>
+                        <button
+                          onClick={() => handleCategoryClick(name)}
+                          style={{
+                            width: '100%',
+                            textAlign: 'left',
+                            padding: '6px 12px',
+                            borderRadius: '4px',
+                            border:
+                              '1px solid ' +
+                              (selectedCategory === name
+                                ? 'var(--gold)'
+                                : 'transparent'),
+                            backgroundColor:
+                              selectedCategory === name
+                                ? 'rgba(183, 138, 52, 0.15)'
+                                : 'transparent',
+                            color:
+                              selectedCategory === name
+                                ? 'var(--gold-bright)'
+                                : 'var(--parchment)',
+                            cursor: 'pointer',
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: '0.72rem',
+                            transition: 'all 0.2s ease',
+                          }}
+                        >
+                          {name}{' '}
+                          <span style={{ opacity: 0.6 }}>({count})</span>
+                        </button>
 
-                          {selectedCategory === name &&
-                            subCategoriesWithCounts.length >
-                              0 && (
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  gap: '3px',
-                                  marginTop: '4px',
-                                  marginBottom: '4px',
-                                  paddingLeft: '10px',
-                                  borderLeft:
-                                    '1px solid var(--gold)',
-                                }}
-                              >
-                                {subCategoriesWithCounts.map(
-                                  (sub) => (
-                                    <button
-                                      key={sub.name}
-                                      onClick={() =>
-                                        setSelectedSubCategory(
-                                          sub.name
-                                        )
-                                      }
-                                      style={{
-                                        textAlign: 'left',
-                                        padding: '3px 8px',
-                                        borderRadius: '3px',
-                                        border: 'none',
-                                        backgroundColor:
-                                          selectedSubCategory ===
-                                          sub.name
-                                            ? 'rgba(183, 138, 52, 0.25)'
-                                            : 'transparent',
-                                        color:
-                                          selectedSubCategory ===
-                                          sub.name
-                                            ? 'var(--gold-bright)'
-                                            : 'var(--parchment-dim)',
-                                        cursor: 'pointer',
-                                        fontFamily:
-                                          'var(--font-mono)',
-                                        fontSize: '0.68rem',
-                                      }}
-                                    >
-                                      {sub.name}{' '}
-                                      <span
-                                        style={{
-                                          opacity: 0.6,
-                                        }}
-                                      >
-                                        ({sub.count})
-                                      </span>
-                                    </button>
-                                  )
-                                )}
-                              </div>
-                            )}
-                        </div>
-                      )
-                    )}
+                        {selectedCategory === name &&
+                          subCategoriesWithCounts.length > 0 && (
+                            <div
+                              style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '3px',
+                                marginTop: '4px',
+                                marginBottom: '4px',
+                                paddingLeft: '10px',
+                                borderLeft: '1px solid var(--gold)',
+                              }}
+                            >
+                              {subCategoriesWithCounts.map((sub) => (
+                                <button
+                                  key={sub.name}
+                                  onClick={() =>
+                                    setSelectedSubCategory(sub.name)
+                                  }
+                                  style={{
+                                    textAlign: 'left',
+                                    padding: '3px 8px',
+                                    borderRadius: '3px',
+                                    border: 'none',
+                                    backgroundColor:
+                                      selectedSubCategory === sub.name
+                                        ? 'rgba(183, 138, 52, 0.25)'
+                                        : 'transparent',
+                                    color:
+                                      selectedSubCategory === sub.name
+                                        ? 'var(--gold-bright)'
+                                        : 'var(--parchment-dim)',
+                                    cursor: 'pointer',
+                                    fontFamily: 'var(--font-mono)',
+                                    fontSize: '0.68rem',
+                                  }}
+                                >
+                                  {sub.name}{' '}
+                                  <span style={{ opacity: 0.6 }}>
+                                    ({sub.count})
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                      </div>
+                    ))}
                   </div>
 
                   <div
                     style={{
-                      borderTop:
-                        '1px solid var(--line)',
+                      borderTop: '1px solid var(--line)',
                       paddingTop: '14px',
                     }}
                   >
                     <div
                       style={{
-                        fontFamily:
-                          'var(--font-mono)',
+                        fontFamily: 'var(--font-mono)',
                         fontSize: '0.68rem',
                         opacity: 0.6,
                         marginBottom: '8px',
@@ -411,9 +351,7 @@ export default function Kutuphane({ sources = [], error }) {
                       FİLTRELER
                     </div>
 
-                    <div
-                      style={{ marginBottom: '12px' }}
-                    >
+                    <div style={{ marginBottom: '12px' }}>
                       <label
                         style={{
                           fontSize: '0.7rem',
@@ -424,21 +362,12 @@ export default function Kutuphane({ sources = [], error }) {
                         Yıl Aralığı
                       </label>
 
-                      <div
-                        style={{
-                          display: 'flex',
-                          gap: '4px',
-                        }}
-                      >
+                      <div style={{ display: 'flex', gap: '4px' }}>
                         <input
                           type="number"
                           placeholder="Başlangıç"
                           value={yilBaslangic}
-                          onChange={(e) =>
-                            setYilBaslangic(
-                              e.target.value
-                            )
-                          }
+                          onChange={(e) => setYilBaslangic(e.target.value)}
                           style={{
                             width: '50%',
                             fontSize: '0.7rem',
@@ -450,11 +379,7 @@ export default function Kutuphane({ sources = [], error }) {
                           type="number"
                           placeholder="Bitiş"
                           value={yilBitis}
-                          onChange={(e) =>
-                            setYilBitis(
-                              e.target.value
-                            )
-                          }
+                          onChange={(e) => setYilBitis(e.target.value)}
                           style={{
                             width: '50%',
                             fontSize: '0.7rem',
@@ -477,11 +402,7 @@ export default function Kutuphane({ sources = [], error }) {
 
                       <select
                         value={selectedDil}
-                        onChange={(e) =>
-                          setSelectedDil(
-                            e.target.value
-                          )
-                        }
+                        onChange={(e) => setSelectedDil(e.target.value)}
                         style={{
                           width: '100%',
                           fontSize: '0.7rem',
@@ -498,12 +419,7 @@ export default function Kutuphane({ sources = [], error }) {
                   </div>
                 </aside>
 
-                <div
-                  style={{
-                    flex: 1,
-                    width: '100%',
-                  }}
-                >
+                <div style={{ flex: 1, width: '100%' }}>
                   <div
                     style={{
                       display: 'grid',
@@ -513,11 +429,9 @@ export default function Kutuphane({ sources = [], error }) {
                       gap: '16px',
                     }}
                   >
-                    {filteredSources.map((s) => {
-                      const cats =
-                        getSourceCategories(s);
-                      const subs =
-                        getSourceSubCategories(s);
+                    {paginatedSources.map((s) => {
+                      const cats = getSourceCategories(s);
+                      const subs = getSourceSubCategories(s);
 
                       return (
                         <div
@@ -526,8 +440,7 @@ export default function Kutuphane({ sources = [], error }) {
                           style={{
                             display: 'flex',
                             flexDirection: 'column',
-                            justifyContent:
-                              'space-between',
+                            justifyContent: 'space-between',
                             padding: '16px',
                             minHeight: '150px',
                           }}
@@ -562,10 +475,8 @@ export default function Kutuphane({ sources = [], error }) {
                                     fontSize: '0.62rem',
                                     padding: '2px 6px',
                                     opacity: 0.7,
-                                    borderColor:
-                                      'var(--line-strong)',
-                                    color:
-                                      'var(--parchment-dim)',
+                                    borderColor: 'var(--line-strong)',
+                                    color: 'var(--parchment-dim)',
                                   }}
                                 >
                                   {sub}
@@ -588,8 +499,7 @@ export default function Kutuphane({ sources = [], error }) {
                             style={{
                               marginTop: '12px',
                               display: 'flex',
-                              justifyContent:
-                                'space-between',
+                              justifyContent: 'space-between',
                               alignItems: 'flex-end',
                               gap: '8px',
                             }}
@@ -602,21 +512,10 @@ export default function Kutuphane({ sources = [], error }) {
                               }}
                             >
                               {s.yazar}
-                              {s.cevirmen
-                                ? ' (Çev: ' +
-                                  s.cevirmen +
-                                  ')'
-                                : ''}
-                              {s.yil
-                                ? ' · ' + s.yil
-                                : ''}
-                              {s.tip
-                                ? ' · ' + s.tip
-                                : ''}
-                              {s.yayin_bilgisi
-                                ? ' · ' +
-                                  s.yayin_bilgisi
-                                : ''}
+                              {s.cevirmen ? ' (Çev: ' + s.cevirmen + ')' : ''}
+                              {s.yil ? ' · ' + s.yil : ''}
+                              {s.tip ? ' · ' + s.tip : ''}
+                              {s.yayin_bilgisi ? ' · ' + s.yayin_bilgisi : ''}
                             </div>
 
                             {s.pdf_url && (
@@ -626,14 +525,10 @@ export default function Kutuphane({ sources = [], error }) {
                                 rel="noopener noreferrer"
                                 style={{
                                   fontSize: '0.68rem',
-                                  fontFamily:
-                                    'var(--font-mono)',
-                                  color:
-                                    'var(--gold-bright)',
-                                  textDecoration:
-                                    'none',
-                                  borderBottom:
-                                    '1px dashed var(--gold)',
+                                  fontFamily: 'var(--font-mono)',
+                                  color: 'var(--gold-bright)',
+                                  textDecoration: 'none',
+                                  borderBottom: '1px dashed var(--gold)',
                                   whiteSpace: 'nowrap',
                                   paddingBottom: '1px',
                                 }}
@@ -650,14 +545,88 @@ export default function Kutuphane({ sources = [], error }) {
                   {!error &&
                     sources.length > 0 &&
                     filteredSources.length === 0 && (
-                      <p
-                        className="status"
-                        style={{ marginTop: 20 }}
-                      >
-                        Bu kriterlere uyan bir kaynak
-                        bulunmuyor.
+                      <p className="status" style={{ marginTop: 20 }}>
+                        Bu kriterlere uyan bir kaynak bulunmuyor.
                       </p>
                     )}
+
+                  {/* Sayfalama (Pagination) Kontrolleri */}
+                  {totalPages > 1 && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        gap: '8px',
+                        marginTop: '32px',
+                        paddingTop: '16px',
+                        borderTop: '1px solid var(--line)',
+                      }}
+                    >
+                      <button
+                        onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                        disabled={currentPage === 1}
+                        style={{
+                          padding: '6px 12px',
+                          fontSize: '0.75rem',
+                          fontFamily: 'var(--font-mono)',
+                          background: 'transparent',
+                          border: '1px solid var(--line)',
+                          color: currentPage === 1 ? 'var(--parchment-dim)' : 'var(--gold-bright)',
+                          cursor: currentPage === 1 ? 'default' : 'pointer',
+                          opacity: currentPage === 1 ? 0.4 : 1,
+                          borderRadius: '4px',
+                        }}
+                      >
+                        « Önceki
+                      </button>
+
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          style={{
+                            padding: '6px 10px',
+                            fontSize: '0.75rem',
+                            fontFamily: 'var(--font-mono)',
+                            background:
+                              currentPage === page
+                                ? 'rgba(183, 138, 52, 0.2)'
+                                : 'transparent',
+                            border:
+                              '1px solid ' +
+                              (currentPage === page ? 'var(--gold)' : 'var(--line)'),
+                            color:
+                              currentPage === page
+                                ? 'var(--gold-bright)'
+                                : 'var(--parchment)',
+                            cursor: 'pointer',
+                            borderRadius: '4px',
+                          }}
+                        >
+                          {page}
+                        </button>
+                      ))}
+
+                      <button
+                        onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                        style={{
+                          padding: '6px 12px',
+                          fontSize: '0.75rem',
+                          fontFamily: 'var(--font-mono)',
+                          background: 'transparent',
+                          border: '1px solid var(--line)',
+                          color: currentPage === totalPages ? 'var(--parchment-dim)' : 'var(--gold-bright)',
+                          cursor: currentPage === totalPages ? 'default' : 'pointer',
+                          opacity: currentPage === totalPages ? 0.4 : 1,
+                          borderRadius: '4px',
+                        }}
+                      >
+                        Sonraki »
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </>
