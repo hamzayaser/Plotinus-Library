@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import Layout from '../components/Layout';
+import { supabase } from '../lib/supabaseClient';
 
 const CATEGORY_SUBCATEGORY_MAP = {
   'Ontoloji': ['Bir', 'Nous', 'Psyche', 'Emanasyon', 'Madde ve Kötülük'],
@@ -735,5 +736,19 @@ export default function Kutuphane({ sources = [], error }) {
         </div>
       </section>
     </Layout>
-  );
+   );
+}
+
+export async function getServerSideProps() {
+  const { data, error } = await supabase
+    .from('sources')
+    .select('*')
+    .order('id', { ascending: false });
+
+  return {
+    props: {
+      sources: data || [],
+      error: error ? error.message : null,
+    },
+  };
 }

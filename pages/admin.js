@@ -24,7 +24,12 @@ const EMPTY_SOURCE = {
   yil: '',
   tip: '',
   dil: '',
-  yayin_bilgisi: '',
+  yayinevi: '',
+  yayin_yeri: '',
+  isbn: '',
+  cilt: '',
+  sayi: '',
+  sayfa_araligi: '',
   aciklama: '',
   pdf_url: '',
 };
@@ -291,13 +296,35 @@ function SourceFormFields({ form, setForm, handleSubmit, status, editingId, onCa
         </div>
       </div>
 
-      <div className="field" style={{ marginTop: 12 }}>
-        <label>Yayın Bilgisi (Yayınevi / Dergi, Sayı vb.)</label>
-        <input
-          value={form.yayin_bilgisi}
-          onChange={(e) => setForm({ ...form, yayin_bilgisi: e.target.value })}
-          placeholder="Örn: İş Bankası Kültür Yayınları — veya — Kaygı Dergisi, Sayı 12"
-        />
+      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: 12 }}>
+        <div className="field" style={{ flex: '2 1 220px', margin: 0 }}>
+          <label>Yayınevi / Dergi Adı</label>
+          <input
+            value={form.yayinevi}
+            onChange={(e) => setForm({ ...form, yayinevi: e.target.value })}
+            placeholder="Örn: İş Bankası Kültür Yayınları — veya — Kaygı Dergisi"
+          />
+        </div>
+        <div className="field" style={{ flex: '1 1 140px', margin: 0 }}>
+          <label>Yayın Yeri</label>
+          <input value={form.yayin_yeri} onChange={(e) => setForm({ ...form, yayin_yeri: e.target.value })} placeholder="Örn: İstanbul" />
+        </div>
+        <div className="field" style={{ flex: '0 1 90px', margin: 0 }}>
+          <label>Cilt</label>
+          <input value={form.cilt} onChange={(e) => setForm({ ...form, cilt: e.target.value })} />
+        </div>
+        <div className="field" style={{ flex: '0 1 90px', margin: 0 }}>
+          <label>Sayı</label>
+          <input value={form.sayi} onChange={(e) => setForm({ ...form, sayi: e.target.value })} />
+        </div>
+        <div className="field" style={{ flex: '0 1 110px', margin: 0 }}>
+          <label>Sayfa Aralığı</label>
+          <input value={form.sayfa_araligi} onChange={(e) => setForm({ ...form, sayfa_araligi: e.target.value })} placeholder="Örn: 55-78" />
+        </div>
+        <div className="field" style={{ flex: '0 1 150px', margin: 0 }}>
+          <label>ISBN</label>
+          <input value={form.isbn} onChange={(e) => setForm({ ...form, isbn: e.target.value })} />
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: '10px', marginTop: 12, flexWrap: 'wrap' }}>
@@ -436,7 +463,12 @@ function SourcesAdmin({ password }) {
       yil: s.yil || '',
       tip: s.tip || '',
       dil: s.dil || '',
-      yayin_bilgisi: s.yayin_bilgisi || '',
+      yayinevi: s.yayinevi || '',
+      yayin_yeri: s.yayin_yeri || '',
+      isbn: s.isbn || '',
+      cilt: s.cilt || '',
+      sayi: s.sayi || '',
+      sayfa_araligi: s.sayfa_araligi || '',
       aciklama: s.aciklama || '',
       pdf_url: s.pdf_url || '',
     });
