@@ -42,6 +42,69 @@ export default function Kutuphane({ sources = [], error }) {
     setCurrentPage(1);
   }, [selectedCategory, selectedSubCategory, selectedDil, yilBaslangic, yilBitis, searchQuery]);
 
+  // Tek bir "Ad Soyad" ismini Zotero'nun beklediği creator formatına çevirir
+  const parseNameToCreator = (fullName, creatorType) => {
+    const trimmed = (fullName || '').trim();
+    if (!trimmed) return null;
+    const parts = trimmed.split(' ');
+    const lastName = parts.pop();
+    const firstName = parts.join(' ');
+    return { creatorType, firstName, lastName };
+  };
+
+  // Noktalı virgülle ayrılmış birden fazla ismi ayrıştırır (örn: "John Smith; Mary Jones")
+  const parseNamesToCreators = (namesString, creatorType) => {
+    if (!namesString) return [];
+    return namesString
+      .split(';')
+      .map((n) => n.trim())
+      .filter(Boolean)
+      .map((n) => parseNameToCreator(n, creatorType))
+      .filter(Boolean);
+  };
+
+  // Zotero İçin Tam Künye Bağlantısı Oluşturucu
+  // Ayrı sütunları (yayinevi, yayin_yeri, isbn, cilt, sayi, sayfa_araligi) kullanır.
+  // Tip makale ise dergi adı publicationTitle'a, kitap ise publisher'a gider.
+  // Yazar/çevirmen "Ad Soyad" formatında ayrıştırılıp Zotero creator alanlarına eklenir.
+  const getZoteroSaveUrl = (source) => {
+    const baseUrl = 'https://www.zotero.org/save';
+    const tip = (source.tip || 'book').toLowerCase();
+    const isArticle = tip.includes('makale') || tip === 'journalarticle';
+
+    const authors = parseNamesToCreators(source.yazar, 'author');
+    const translators = parseNamesToCreators(source.cevirmen, 'translator');
+    const creators = [...authors, ...translators];
+
+    const params = new URLSearchParams({
+      type: isArticle ? 'journalArticle' : 'book',
+      title: source.baslik || '',
+      date: source.yil || '',
+      language: source.dil || '',
+      place: source.yayin_yeri || '',
+      volume: source.cilt || '',
+      issue: source.sayi || '',
+      pages: source.sayfa_araligi || '',
+      isbn: source.isbn || '',
+      url: source.pdf_url || '',
+    });
+
+    if (isArticle) {
+      params.append('publicationTitle', source.yayinevi || '');
+    } else {
+      params.append('publisher', source.yayinevi || '');
+    }
+
+    // Her creator'ı ayrı ayrı ekle (Zotero save endpoint'i creator[0][firstName] formatını bekler)
+    creators.forEach((c, i) => {
+      params.append(`creator[${i}][creatorType]`, c.creatorType);
+      params.append(`creator[${i}][firstName]`, c.firstName);
+      params.append(`creator[${i}][lastName]`, c.lastName);
+    });
+
+    return `${baseUrl}?${params.toString()}`;
+  };
+
   const getSourceCategories = (source) => {
     if (!source.kategori) return [];
     if (Array.isArray(source.kategori)) return source.kategori;
@@ -512,6 +575,7 @@ export default function Kutuphane({ sources = [], error }) {
                             </h3>
                           </div>
 
+                          {/* Kart Alt Bilgisi (Sade) ve Sağ Taraf Bağlantıları */}
                           <div
                             style={{
                               marginTop: '12px',
@@ -529,30 +593,54 @@ export default function Kutuphane({ sources = [], error }) {
                               }}
                             >
                               {s.yazar}
-                              {s.cevirmen ? ' (Çev: ' + s.cevirmen + ')' : ''}
                               {s.yil ? ' · ' + s.yil : ''}
-                              {s.tip ? ' · ' + s.tip : ''}
-                              {s.yayin_bilgisi ? ' · ' + s.yayin_bilgisi : ''}
                             </div>
 
-                            {s.pdf_url && (
+                            <div
+                              style={{
+                                display: 'flex',
+                                gap: '8px',
+                                alignItems: 'center',
+                              }}
+                            >
+                              {/* Zotero'ya Tam Künye Aktarma Linki */}
                               <a
-                                href={s.pdf_url}
+                                href={getZoteroSaveUrl(s)}
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                title="Zotero kütüphanenize tam atıf olarak ekleyin"
                                 style={{
                                   fontSize: '0.68rem',
                                   fontFamily: 'var(--font-mono)',
-                                  color: 'var(--gold-bright)',
+                                  color: 'var(--parchment-dim)',
                                   textDecoration: 'none',
-                                  borderBottom: '1px dashed var(--gold)',
+                                  borderBottom: '1px dashed var(--line-strong)',
                                   whiteSpace: 'nowrap',
                                   paddingBottom: '1px',
                                 }}
                               >
-                                PDF ↗
+                                Zotero ↗
                               </a>
-                            )}
+
+                              {s.pdf_url && (
+                                <a
+                                  href={s.pdf_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{
+                                    fontSize: '0.68rem',
+                                    fontFamily: 'var(--font-mono)',
+                                    color: 'var(--gold-bright)',
+                                    textDecoration: 'none',
+                                    borderBottom: '1px dashed var(--gold)',
+                                    whiteSpace: 'nowrap',
+                                    paddingBottom: '1px',
+                                  }}
+                                >
+                                  PDF ↗
+                                </a>
+                              )}
+                            </div>
                           </div>
                         </div>
                       );
@@ -651,18 +739,4 @@ export default function Kutuphane({ sources = [], error }) {
       </section>
     </Layout>
   );
-}
-
-export async function getServerSideProps() {
-  const { data, error } = await supabase
-    .from('sources')
-    .select('*')
-    .order('id', { ascending: false });
-
-  return {
-    props: {
-      sources: data || [],
-      error: error ? error.message : null,
-    },
-  };
 }
