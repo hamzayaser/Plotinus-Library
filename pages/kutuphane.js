@@ -52,16 +52,17 @@ export default function Kutuphane({ sources = [], error }) {
     return { creatorType, firstName, lastName };
   };
 
-  // Noktalı virgülle ayrılmış birden fazla ismi ayrıştırır (örn: "John Smith; Mary Jones")
-  const parseNamesToCreators = (namesString, creatorType) => {
-    if (!namesString) return [];
-    return namesString
-      .split(';')
-      .map((n) => n.trim())
-      .filter(Boolean)
-      .map((n) => parseNameToCreator(n, creatorType))
-      .filter(Boolean);
-  };
+  // Noktalı virgül veya "&" ile ayrılmış birden fazla ismi ayrıştırır
+// (örn: "John Smith; Mary Jones" veya "Richard Dufour & Hanneke Teunissen")
+const parseNamesToCreators = (namesString, creatorType) => {
+  if (!namesString) return [];
+  return namesString
+    .split(/;|&/)
+    .map((n) => n.trim())
+    .filter(Boolean)
+    .map((n) => parseNameToCreator(n, creatorType))
+    .filter(Boolean);
+};
 
   // Zotero İçin Tam Künye Bağlantısı Oluşturucu
   // Ayrı sütunları (yayinevi, yayin_yeri, isbn, cilt, sayi, sayfa_araligi) kullanır.
