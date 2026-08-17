@@ -4,14 +4,49 @@ import { supabase } from '../lib/supabaseClient';
 
 const CATEGORY_SUBCATEGORY_MAP = {
   'Ontoloji': ['Bir', 'Nous', 'Psyche', 'Emanasyon', 'Madde ve Kötülük'],
-  'Epistemoloji': ['Diyalektik', 'Biliş Teorisi', 'İdealar Teorisi', 'Sezgi ve Kavrayış'],
-  'Etik': ['Erdem', 'Ruhun Arınması', 'Mutluluk', 'İrade ve Özgürlük', 'Siyaset Felsefesi'],
+  'Epistemoloji': [
+    'Diyalektik',
+    'Biliş Teorisi',
+    'İdealar Teorisi',
+    'Sezgi ve Kavrayış',
+  ],
+  'Etik': [
+    'Erdem',
+    'Ruhun Arınması',
+    'Mutluluk',
+    'İrade ve Özgürlük',
+    'Siyaset Felsefesi',
+  ],
   'Estetik': ['Güzellik', 'Sanat ve Taklit', 'Orantı ve Form'],
-  'Mistisizm': ['Vecd ve İttihad', 'Hint Mistisizmi', 'Teürji ve Arınma'],
-  'Mitoloji ve Metafor': ['Semboller', 'Mitolojik Anlatılar', 'Alegori'],
-  'Mukayeseli Çalışmalar': ['Felsefe-Din Karşılaştırması', 'Doğu-Batı Karşılaştırması'],
-  'Etkilenim': ['Pre-Sokratikler', 'Gnostisizm', 'Platon ve Platoncu Gelenek', 'Aristoteles ve Yorumcuları', 'Stoacılık ve Orta Platonculuk', 'Doğu Doktrinleri'],
-  'Etki': ['Geç Antik Çağ ve Proklos', 'İslam Felsefesi', 'Rönesans Platonculuğu', 'Alman İdealizmi', 'Tasavvuf'],
+  'Mistisizm': [
+    'Vecd ve İttihad',
+    'Hint Mistisizmi',
+    'Teürji ve Arınma',
+  ],
+  'Mitoloji ve Metafor': [
+    'Semboller',
+    'Mitolojik Anlatılar',
+    'Alegori',
+  ],
+  'Mukayeseli Çalışmalar': [
+    'Felsefe-Din Karşılaştırması',
+    'Doğu-Batı Karşılaştırması',
+  ],
+  'Etkilenim': [
+    'Pre-Sokratikler',
+    'Gnostisizm',
+    'Platon ve Platoncu Gelenek',
+    'Aristoteles ve Yorumcuları',
+    'Stoacılık ve Orta Platonculuk',
+    'Doğu Doktrinleri',
+  ],
+  'Etki': [
+    'Geç Antik Çağ ve Proklos',
+    'İslam Felsefesi',
+    'Rönesans Platonculuğu',
+    'Alman İdealizmi',
+    'Tasavvuf',
+  ],
   'Türkçe Literatür': ['Türkçeye Kazandırılan Eserler'],
   'Enneadlar': ['Ana Eser', 'Çeviriler'],
 };
@@ -28,104 +63,234 @@ export default function Kutuphane({ sources = [], error }) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
 
-  // SSR Safe Window Listener
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
+
     const checkWidth = () => setIsMobile(window.innerWidth < 800);
+
     checkWidth();
-    
+
     window.addEventListener('resize', checkWidth);
+
     return () => window.removeEventListener('resize', checkWidth);
   }, []);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategory, selectedSubCategory, selectedDil, yilBaslangic, yilBitis, searchQuery]);
+  }, [
+    selectedCategory,
+    selectedSubCategory,
+    selectedDil,
+    yilBaslangic,
+    yilBitis,
+    searchQuery,
+  ]);
 
+  /*
+   * Zotero için isim ayrıştırma.
+   *
+   * Tek kelimelik isimlerde (ör. Plotinos) Zotero'nun
+   * single-field mantığına uygun olarak "name" kullanılır.
+   *
+   * Birden fazla kelimeli isimlerde son kelime soyadı,
+   * önceki kelimeler ad olarak kabul edilir.
+   */
   const parseNameToCreator = (fullName, creatorType) => {
     const trimmed = (fullName || '').trim();
+
     if (!trimmed) return null;
-    
+
     const parts = trimmed.split(/\s+/);
+
     if (parts.length === 1) {
-      return { creatorType, lastName: parts[0], firstName: '' };
+      return {
+        creatorType,
+        name: parts[0],
+      };
     }
-    
+
     const lastName = parts.pop();
     const firstName = parts.join(' ');
-    return { creatorType, firstName, lastName };
+
+    return {
+      creatorType,
+      firstName,
+      lastName,
+    };
   };
 
+  /*
+   * Yazar ve çevirmenleri ayırır.
+   *
+   * Desteklenen ayraçlar:
+   * ;
+   * ,
+   * &
+   * ve
+   */
   const parseNamesToCreators = (namesString, creatorType) => {
     if (!namesString) return [];
+
     return namesString
-      .split(/;|&/)
+      .split(/;|,|&|\s+ve\s+/i)
       .map((n) => n.trim())
       .filter(Boolean)
       .map((n) => parseNameToCreator(n, creatorType))
       .filter(Boolean);
   };
 
-  const getZoteroSaveUrl = (source) => {
-    const baseUrl = 'https://www.zotero.org/save';
+  /*
+   * Her kaynak kartı için COinS/OpenURL metadata üretir.
+   *
+   * Bu fonksiyon sayfadaki bütün kaynakları tek bir kayıt haline
+   * getirmez. Her çağrıldığında SADECE ilgili source nesnesinin
+   * metadata'sını oluşturur.
+   */
+  const getCOinSFormat = (source) => {
     const tip = (source.tip || 'book').toLowerCase();
-    const isArticle = tip.includes('makale') || tip === 'journalarticle';
 
-    const authors = parseNamesToCreators(source.yazar, 'author');
-    const translators = parseNamesToCreators(source.cevirmen, 'translator');
-    const creators = [...authors, ...translators];
+    const isArticle =
+      tip.includes('makale') ||
+      tip.includes('journal') ||
+      tip === 'journalarticle';
 
-    const queryParts = [
-      `type=${encodeURIComponent(isArticle ? 'journalArticle' : 'book')}`,
-      `title=${encodeURIComponent(source.baslik || '')}`,
-      `date=${encodeURIComponent(source.yil || '')}`,
-      `language=${encodeURIComponent(source.dil || '')}`,
-      `place=${encodeURIComponent(source.yayin_yeri || '')}`,
-      `volume=${encodeURIComponent(source.cilt || '')}`,
-      `issue=${encodeURIComponent(source.sayi || '')}`,
-      `pages=${encodeURIComponent(source.sayfa_araligi || '')}`,
-      `isbn=${encodeURIComponent(source.isbn || '')}`,
-      `url=${encodeURIComponent(source.pdf_url || '')}`,
-    ];
+    const params = new URLSearchParams();
+
+    params.set('ctx_ver', 'Z39.88-2004');
 
     if (isArticle) {
-      queryParts.push(`publicationTitle=${encodeURIComponent(source.yayinevi || '')}`);
+      params.set(
+        'rft_val_fmt',
+        'info:ofi/fmt:kev:mtx:journal'
+      );
     } else {
-      queryParts.push(`publisher=${encodeURIComponent(source.yayinevi || '')}`);
+      params.set(
+        'rft_val_fmt',
+        'info:ofi/fmt:kev:mtx:book'
+      );
     }
 
-    creators.forEach((c, i) => {
-      queryParts.push(`creator[${i}][creatorType]=${encodeURIComponent(c.creatorType)}`);
-      if (c.firstName) {
-        queryParts.push(`creator[${i}][firstName]=${encodeURIComponent(c.firstName)}`);
+    if (source.baslik) {
+      params.set('rft.title', source.baslik);
+    }
+
+    if (source.yil) {
+      params.set('rft.date', String(source.yil));
+    }
+
+    if (source.yayinevi) {
+      params.set('rft.publisher', source.yayinevi);
+    }
+
+    if (source.yayin_yeri) {
+      params.set('rft.place', source.yayin_yeri);
+    }
+
+    if (source.isbn) {
+      params.set('rft.isbn', source.isbn);
+    }
+
+    if (source.dil) {
+      params.set('rft.language', source.dil);
+    }
+
+    if (source.cilt) {
+      params.set('rft.volume', String(source.cilt));
+    }
+
+    if (source.sayi) {
+      params.set('rft.issue', String(source.sayi));
+    }
+
+    if (source.sayfa_araligi) {
+      params.set('rft.pages', source.sayfa_araligi);
+    }
+
+    /*
+     * COinS içinde her yazar/çevirmeni ayrı rft.au olarak ekliyoruz.
+     */
+    const authors = parseNamesToCreators(source.yazar, 'author');
+
+    authors.forEach((author) => {
+      if (author.name) {
+        params.append('rft.au', author.name);
+      } else {
+        const fullName = [author.firstName, author.lastName]
+          .filter(Boolean)
+          .join(' ');
+
+        if (fullName) {
+          params.append('rft.au', fullName);
+        }
       }
-      queryParts.push(`creator[${i}][lastName]=${encodeURIComponent(c.lastName)}`);
     });
 
-    return `${baseUrl}?${queryParts.join('&')}`;
+    const translators = parseNamesToCreators(
+      source.cevirmen,
+      'translator'
+    );
+
+    translators.forEach((translator) => {
+      if (translator.name) {
+        params.append('rft.au', translator.name);
+      } else {
+        const fullName = [
+          translator.firstName,
+          translator.lastName,
+        ]
+          .filter(Boolean)
+          .join(' ');
+
+        if (fullName) {
+          params.append('rft.au', fullName);
+        }
+      }
+    });
+
+    return params.toString();
   };
 
   const getSourceCategories = (source) => {
-    if (!source.kategori) return [];
-    if (Array.isArray(source.kategori)) return source.kategori;
-    if (typeof source.kategori === 'string') {
-      return source.kategori.split(',').map((c) => c.trim()).filter(Boolean);
+    if (!source || !source.kategori) return [];
+
+    if (Array.isArray(source.kategori)) {
+      return source.kategori
+        .map((c) => String(c).trim())
+        .filter(Boolean);
     }
+
+    if (typeof source.kategori === 'string') {
+      return source.kategori
+        .split(',')
+        .map((c) => c.trim())
+        .filter(Boolean);
+    }
+
     return [];
   };
 
   const getSourceSubCategories = (source) => {
-    if (!source.alt_kategori) return [];
-    if (Array.isArray(source.alt_kategori)) return source.alt_kategori;
-    if (typeof source.alt_kategori === 'string') {
-      return source.alt_kategori.split(',').map((c) => c.trim()).filter(Boolean);
+    if (!source || !source.alt_kategori) return [];
+
+    if (Array.isArray(source.alt_kategori)) {
+      return source.alt_kategori
+        .map((c) => String(c).trim())
+        .filter(Boolean);
     }
+
+    if (typeof source.alt_kategori === 'string') {
+      return source.alt_kategori
+        .split(',')
+        .map((c) => c.trim())
+        .filter(Boolean);
+    }
+
     return [];
   };
 
   const categoriesWithCounts = useMemo(() => {
     const counts = {};
+
     sources.forEach((s) => {
       getSourceCategories(s).forEach((cat) => {
         counts[cat] = (counts[cat] || 0) + 1;
@@ -137,7 +302,10 @@ export default function Kutuphane({ sources = [], error }) {
     );
 
     return [
-      { name: 'Tümü', count: sources.length },
+      {
+        name: 'Tümü',
+        count: sources.length,
+      },
       ...sortedCats.map((cat) => ({
         name: cat,
         count: counts[cat],
@@ -149,12 +317,21 @@ export default function Kutuphane({ sources = [], error }) {
     if (selectedCategory === 'Tümü') return [];
 
     const counts = {};
-    const allowedSubCats = CATEGORY_SUBCATEGORY_MAP[selectedCategory];
+
+    const allowedSubCats =
+      CATEGORY_SUBCATEGORY_MAP[selectedCategory];
 
     sources.forEach((s) => {
-      if (getSourceCategories(s).includes(selectedCategory)) {
+      if (
+        getSourceCategories(s).includes(
+          selectedCategory
+        )
+      ) {
         getSourceSubCategories(s).forEach((sub) => {
-          if (!allowedSubCats || allowedSubCats.includes(sub)) {
+          if (
+            !allowedSubCats ||
+            allowedSubCats.includes(sub)
+          ) {
             counts[sub] = (counts[sub] || 0) + 1;
           }
         });
@@ -168,11 +345,16 @@ export default function Kutuphane({ sources = [], error }) {
     if (sortedSubCats.length === 0) return [];
 
     const totalSubCount = sources.filter((s) =>
-      getSourceCategories(s).includes(selectedCategory)
+      getSourceCategories(s).includes(
+        selectedCategory
+      )
     ).length;
 
     return [
-      { name: 'Tümü', count: totalSubCount },
+      {
+        name: 'Tümü',
+        count: totalSubCount,
+      },
       ...sortedSubCats.map((sub) => ({
         name: sub,
         count: counts[sub],
@@ -189,48 +371,73 @@ export default function Kutuphane({ sources = [], error }) {
       'Grekçe',
       'Arapça',
     ];
+
     const set = new Set(predefinedLangs);
 
     sources.forEach((s) => {
-      if (s.dil) set.add(s.dil);
+      if (s.dil) {
+        set.add(s.dil);
+      }
     });
 
     return [
       'Tümü',
-      ...Array.from(set).sort((a, b) => a.localeCompare(b, 'tr')),
+      ...Array.from(set).sort((a, b) =>
+        a.localeCompare(b, 'tr')
+      ),
     ];
   }, [sources]);
 
   const filteredSources = useMemo(() => {
-    const q = searchQuery.trim().toLocaleLowerCase('tr');
+    const q = searchQuery
+      .trim()
+      .toLocaleLowerCase('tr');
 
     const filtered = sources.filter((s) => {
       const cats = getSourceCategories(s);
       const subs = getSourceSubCategories(s);
 
       const matchesCategory =
-        selectedCategory === 'Tümü' || cats.includes(selectedCategory);
+        selectedCategory === 'Tümü' ||
+        cats.includes(selectedCategory);
 
       const matchesSubCategory =
-        selectedSubCategory === 'Tümü' || subs.includes(selectedSubCategory);
+        selectedSubCategory === 'Tümü' ||
+        subs.includes(selectedSubCategory);
 
       const matchesDil =
-        selectedDil === 'Tümü' || s.dil === selectedDil;
+        selectedDil === 'Tümü' ||
+        s.dil === selectedDil;
 
-      const yilMatch = (s.yil || '').toString().match(/\d{3,4}/);
-      const yil = yilMatch ? parseInt(yilMatch[0], 10) : NaN;
+      const yilMatch = (s.yil || '')
+        .toString()
+        .match(/\d{3,4}/);
+
+      const yil = yilMatch
+        ? parseInt(yilMatch[0], 10)
+        : NaN;
 
       const matchesYilBaslangic =
-        !yilBaslangic || (!isNaN(yil) && yil >= parseInt(yilBaslangic, 10));
+        !yilBaslangic ||
+        (!isNaN(yil) &&
+          yil >= parseInt(yilBaslangic, 10));
 
       const matchesYilBitis =
-        !yilBitis || (!isNaN(yil) && yil <= parseInt(yilBitis, 10));
+        !yilBitis ||
+        (!isNaN(yil) &&
+          yil <= parseInt(yilBitis, 10));
 
       const matchesSearch =
         !q ||
-        (s.baslik || '').toLocaleLowerCase('tr').includes(q) ||
-        (s.yazar || '').toLocaleLowerCase('tr').includes(q) ||
-        (s.cevirmen || '').toLocaleLowerCase('tr').includes(q);
+        (s.baslik || '')
+          .toLocaleLowerCase('tr')
+          .includes(q) ||
+        (s.yazar || '')
+          .toLocaleLowerCase('tr')
+          .includes(q) ||
+        (s.cevirmen || '')
+          .toLocaleLowerCase('tr')
+          .includes(q);
 
       return (
         matchesCategory &&
@@ -243,7 +450,10 @@ export default function Kutuphane({ sources = [], error }) {
     });
 
     return filtered.sort((a, b) =>
-      (a.baslik || '').localeCompare(b.baslik || '', 'tr')
+      (a.baslik || '').localeCompare(
+        b.baslik || '',
+        'tr'
+      )
     );
   }, [
     sources,
@@ -255,14 +465,29 @@ export default function Kutuphane({ sources = [], error }) {
     searchQuery,
   ]);
 
-  const totalPages = Math.ceil(filteredSources.length / itemsPerPage);
+  const totalPages = Math.ceil(
+    filteredSources.length / itemsPerPage
+  );
+
   const paginatedSources = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredSources.slice(start, start + itemsPerPage);
-  }, [filteredSources, currentPage, itemsPerPage]);
+    const start =
+      (currentPage - 1) * itemsPerPage;
+
+    return filteredSources.slice(
+      start,
+      start + itemsPerPage
+    );
+  }, [
+    filteredSources,
+    currentPage,
+    itemsPerPage,
+  ]);
 
   const handleCategoryClick = (name) => {
-    if (selectedCategory === name && name !== 'Tümü') {
+    if (
+      selectedCategory === name &&
+      name !== 'Tümü'
+    ) {
       setSelectedCategory('Tümü');
       setSelectedSubCategory('Tümü');
     } else {
@@ -273,22 +498,37 @@ export default function Kutuphane({ sources = [], error }) {
 
   return (
     <Layout>
-      <section className="hero" style={{ paddingBottom: 20 }}>
-        <div className="eyebrow">Sources</div>
+      <section
+        className="hero"
+        style={{ paddingBottom: 20 }}
+      >
+        <div className="eyebrow">
+          Sources
+        </div>
+
         <h1>Kütüphane</h1>
+
         <p className="lead">
-          Neoplatonik gelenek üzerine temel metinler ve araştırma kaynakları.
+          Neoplatonik gelenek üzerine temel metinler
+          ve araştırma kaynakları.
         </p>
       </section>
 
-      <section className="section" style={{ borderTop: 'none' }}>
+      <section
+        className="section"
+        style={{ borderTop: 'none' }}
+      >
         <div className="container-wide">
           {error && (
-            <p className="status err">Kaynaklar yüklenemedi: {error}</p>
+            <p className="status err">
+              Kaynaklar yüklenemedi: {error}
+            </p>
           )}
 
           {!error && sources.length === 0 && (
-            <p className="status">Henüz kaynak eklenmemiş.</p>
+            <p className="status">
+              Henüz kaynak eklenmemiş.
+            </p>
           )}
 
           {!error && sources.length > 0 && (
@@ -298,14 +538,18 @@ export default function Kutuphane({ sources = [], error }) {
                   type="text"
                   placeholder="Eser adı veya yazar ara..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) =>
+                    setSearchQuery(e.target.value)
+                  }
                   style={{
                     width: '100%',
                     padding: '12px 16px',
                     fontSize: '0.85rem',
                     borderRadius: '6px',
-                    border: '1px solid var(--line)',
-                    background: 'rgba(255,255,255,0.03)',
+                    border:
+                      '1px solid var(--line)',
+                    background:
+                      'rgba(255,255,255,0.03)',
                     color: 'var(--parchment)',
                   }}
                 />
@@ -314,14 +558,18 @@ export default function Kutuphane({ sources = [], error }) {
               <div
                 style={{
                   display: 'flex',
-                  flexDirection: isMobile ? 'column' : 'row',
+                  flexDirection: isMobile
+                    ? 'column'
+                    : 'row',
                   gap: '28px',
                   alignItems: 'flex-start',
                 }}
               >
                 <aside
                   style={{
-                    width: isMobile ? '100%' : '220px',
+                    width: isMobile
+                      ? '100%'
+                      : '220px',
                     flexShrink: 0,
                   }}
                 >
@@ -333,96 +581,138 @@ export default function Kutuphane({ sources = [], error }) {
                       marginBottom: '24px',
                     }}
                   >
-                    {categoriesWithCounts.map(({ name, count }) => (
-                      <div key={name}>
-                        <button
-                          onClick={() => handleCategoryClick(name)}
-                          style={{
-                            width: '100%',
-                            textAlign: 'left',
-                            padding: '6px 12px',
-                            borderRadius: '4px',
-                            border:
-                              '1px solid ' +
-                              (selectedCategory === name
-                                ? 'var(--gold)'
-                                : 'transparent'),
-                            backgroundColor:
-                              selectedCategory === name
-                                ? 'rgba(183, 138, 52, 0.15)'
-                                : 'transparent',
-                            color:
-                              selectedCategory === name
-                                ? 'var(--gold-bright)'
-                                : 'var(--parchment)',
-                            cursor: 'pointer',
-                            fontFamily: 'var(--font-mono)',
-                            fontSize: '0.72rem',
-                            transition: 'all 0.2s ease',
-                          }}
-                        >
-                          {name}{' '}
-                          <span style={{ opacity: 0.6 }}>({count})</span>
-                        </button>
-
-                        {selectedCategory === name &&
-                          subCategoriesWithCounts.length > 0 && (
-                            <div
+                    {categoriesWithCounts.map(
+                      ({ name, count }) => (
+                        <div key={name}>
+                          <button
+                            onClick={() =>
+                              handleCategoryClick(
+                                name
+                              )
+                            }
+                            style={{
+                              width: '100%',
+                              textAlign: 'left',
+                              padding:
+                                '6px 12px',
+                              border:
+                                '1px solid ' +
+                                (selectedCategory ===
+                                name
+                                  ? 'var(--gold)'
+                                  : 'transparent'),
+                              backgroundColor:
+                                selectedCategory ===
+                                name
+                                  ? 'rgba(183, 138, 52, 0.15)'
+                                  : 'transparent',
+                              color:
+                                selectedCategory ===
+                                name
+                                  ? 'var(--gold-bright)'
+                                  : 'var(--parchment)',
+                              cursor: 'pointer',
+                              fontFamily:
+                                'var(--font-mono)',
+                              fontSize:
+                                '0.72rem',
+                              transition:
+                                'all 0.2s ease',
+                            }}
+                          >
+                            {name}{' '}
+                            <span
                               style={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '3px',
-                                marginTop: '4px',
-                                marginBottom: '4px',
-                                paddingLeft: '10px',
-                                borderLeft: '1px solid var(--gold)',
+                                opacity: 0.6,
                               }}
                             >
-                              {subCategoriesWithCounts.map((sub) => (
-                                <button
-                                  key={sub.name}
-                                  onClick={() =>
-                                    setSelectedSubCategory(sub.name)
-                                  }
-                                  style={{
-                                    textAlign: 'left',
-                                    padding: '3px 8px',
-                                    borderRadius: '3px',
-                                    border: 'none',
-                                    backgroundColor:
-                                      selectedSubCategory === sub.name
-                                        ? 'rgba(183, 138, 52, 0.25)'
-                                        : 'transparent',
-                                    color:
-                                      selectedSubCategory === sub.name
-                                        ? 'var(--gold-bright)'
-                                        : 'var(--parchment-dim)',
-                                    cursor: 'pointer',
-                                    fontFamily: 'var(--font-mono)',
-                                    fontSize: '0.68rem',
-                                  }}
-                                >
-                                  {sub.name}{' '}
-                                  <span style={{ opacity: 0.6 }}>
-                                    ({sub.count})
-                                  </span>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                      </div>
-                    ))}
+                              ({count})
+                            </span>
+                          </button>
+
+                          {selectedCategory ===
+                            name &&
+                            subCategoriesWithCounts.length >
+                              0 && (
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  flexDirection:
+                                    'column',
+                                  gap: '3px',
+                                  marginTop: '4px',
+                                  marginBottom:
+                                    '4px',
+                                  paddingLeft:
+                                    '10px',
+                                  borderLeft:
+                                    '1px solid var(--gold)',
+                                }}
+                              >
+                                {subCategoriesWithCounts.map(
+                                  (sub) => (
+                                    <button
+                                      key={sub.name}
+                                      onClick={() =>
+                                        setSelectedSubCategory(
+                                          sub.name
+                                        )
+                                      }
+                                      style={{
+                                        textAlign:
+                                          'left',
+                                        padding:
+                                          '3px 8px',
+                                        border:
+                                          'none',
+                                        backgroundColor:
+                                          selectedSubCategory ===
+                                          sub.name
+                                            ? 'rgba(183, 138, 52, 0.25)'
+                                            : 'transparent',
+                                        color:
+                                          selectedSubCategory ===
+                                          sub.name
+                                            ? 'var(--gold-bright)'
+                                            : 'var(--parchment-dim)',
+                                        cursor:
+                                          'pointer',
+                                        fontFamily:
+                                          'var(--font-mono)',
+                                        fontSize:
+                                          '0.68rem',
+                                      }}
+                                    >
+                                      {sub.name}{' '}
+                                      <span
+                                        style={{
+                                          opacity:
+                                            0.6,
+                                        }}
+                                      >
+                                        ({sub.count})
+                                      </span>
+                                    </button>
+                                  )
+                                )}
+                              </div>
+                            )}
+                        </div>
+                      )
+                    )}
                   </div>
 
                   <div
                     style={{
-                      borderTop: '1px solid var(--line)',
+                      borderTop:
+                        '1px solid var(--line)',
                       paddingTop: '14px',
                     }}
                   >
                     <div
                       style={{
-                        fontFamily: 'var(--font-mono)',
+                        fontFamily:
+                          'var(--font-mono)',
                         fontSize: '0.68rem',
                         opacity: 0.6,
                         marginBottom: '8px',
@@ -431,7 +721,11 @@ export default function Kutuphane({ sources = [], error }) {
                       FİLTRELER
                     </div>
 
-                    <div style={{ marginBottom: '12px' }}>
+                    <div
+                      style={{
+                        marginBottom: '12px',
+                      }}
+                    >
                       <label
                         style={{
                           fontSize: '0.7rem',
@@ -442,16 +736,26 @@ export default function Kutuphane({ sources = [], error }) {
                         Yıl Aralığı
                       </label>
 
-                      <div style={{ display: 'flex', gap: '4px' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: '4px',
+                        }}
+                      >
                         <input
                           type="number"
                           placeholder="Başlangıç"
                           value={yilBaslangic}
-                          onChange={(e) => setYilBaslangic(e.target.value)}
+                          onChange={(e) =>
+                            setYilBaslangic(
+                              e.target.value
+                            )
+                          }
                           style={{
                             width: '50%',
                             fontSize: '0.7rem',
-                            padding: '4px 6px',
+                            padding:
+                              '4px 6px',
                           }}
                         />
 
@@ -459,11 +763,16 @@ export default function Kutuphane({ sources = [], error }) {
                           type="number"
                           placeholder="Bitiş"
                           value={yilBitis}
-                          onChange={(e) => setYilBitis(e.target.value)}
+                          onChange={(e) =>
+                            setYilBitis(
+                              e.target.value
+                            )
+                          }
                           style={{
                             width: '50%',
                             fontSize: '0.7rem',
-                            padding: '4px 6px',
+                            padding:
+                              '4px 6px',
                           }}
                         />
                       </div>
@@ -482,7 +791,11 @@ export default function Kutuphane({ sources = [], error }) {
 
                       <select
                         value={selectedDil}
-                        onChange={(e) => setSelectedDil(e.target.value)}
+                        onChange={(e) =>
+                          setSelectedDil(
+                            e.target.value
+                          )
+                        }
                         style={{
                           width: '100%',
                           fontSize: '0.7rem',
@@ -490,7 +803,10 @@ export default function Kutuphane({ sources = [], error }) {
                         }}
                       >
                         {dilOptions.map((d) => (
-                          <option key={d} value={d}>
+                          <option
+                            key={d}
+                            value={d}
+                          >
                             {d}
                           </option>
                         ))}
@@ -499,19 +815,37 @@ export default function Kutuphane({ sources = [], error }) {
                   </div>
                 </aside>
 
-                <div style={{ flex: 1, width: '100%' }}>
+                <div
+                  style={{
+                    flex: 1,
+                    width: '100%',
+                  }}
+                >
                   <div
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: isMobile
-                        ? '1fr'
-                        : 'repeat(auto-fill, minmax(280px, 1fr))',
+                      gridTemplateColumns:
+                        isMobile
+                          ? '1fr'
+                          : 'repeat(auto-fill, minmax(280px, 1fr))',
                       gap: '16px',
                     }}
                   >
                     {paginatedSources.map((s) => {
-                      const cats = getSourceCategories(s);
-                      const subs = getSourceSubCategories(s);
+                      const cats =
+                        getSourceCategories(s);
+
+                      const subs =
+                        getSourceSubCategories(s);
+
+                      /*
+                       * HER KUTUCUK İÇİN AYRI COinS.
+                       *
+                       * Bu span yalnızca bu karttaki "s"
+                       * kaynağının metadata'sını içerir.
+                       */
+                      const coins =
+                        getCOinSFormat(s);
 
                       return (
                         <div
@@ -519,56 +853,86 @@ export default function Kutuphane({ sources = [], error }) {
                           key={s.id}
                           style={{
                             display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'space-between',
+                            flexDirection:
+                              'column',
+                            justifyContent:
+                              'space-between',
                             padding: '16px',
                             minHeight: '150px',
                           }}
                         >
+                          {/* Zotero COinS metadata */}
+                          <span
+                            className="Z3988"
+                            title={coins}
+                            style={{
+                              display: 'none',
+                            }}
+                            aria-hidden="true"
+                          />
+
                           <div>
                             <div
                               style={{
                                 display: 'flex',
                                 gap: '4px',
-                                flexWrap: 'wrap',
-                                marginBottom: '8px',
+                                flexWrap:
+                                  'wrap',
+                                marginBottom:
+                                  '8px',
                               }}
                             >
-                              {cats.map((cat, idx) => (
-                                <span
-                                  className="tag"
-                                  key={idx}
-                                  style={{
-                                    fontSize: '0.62rem',
-                                    padding: '2px 6px',
-                                  }}
-                                >
-                                  {cat}
-                                </span>
-                              ))}
+                              {cats.map(
+                                (cat, idx) => (
+                                  <span
+                                    className="tag"
+                                    key={idx}
+                                    style={{
+                                      fontSize:
+                                        '0.62rem',
+                                      padding:
+                                        '2px 6px',
+                                    }}
+                                  >
+                                    {cat}
+                                  </span>
+                                )
+                              )}
 
-                              {subs.map((sub, idx) => (
-                                <span
-                                  className="tag"
-                                  key={'sub-' + idx}
-                                  style={{
-                                    fontSize: '0.62rem',
-                                    padding: '2px 6px',
-                                    opacity: 0.7,
-                                    borderColor: 'var(--line-strong)',
-                                    color: 'var(--parchment-dim)',
-                                  }}
-                                >
-                                  {sub}
-                                </span>
-                              ))}
+                              {subs.map(
+                                (sub, idx) => (
+                                  <span
+                                    className="tag"
+                                    key={
+                                      'sub-' +
+                                      idx
+                                    }
+                                    style={{
+                                      fontSize:
+                                        '0.62rem',
+                                      padding:
+                                        '2px 6px',
+                                      opacity: 0.7,
+                                      borderColor:
+                                        'var(--line-strong)',
+                                      color:
+                                        'var(--parchment-dim)',
+                                    }}
+                                  >
+                                    {sub}
+                                  </span>
+                                )
+                              )}
                             </div>
 
                             <h3
                               style={{
-                                fontSize: '0.95rem',
-                                lineHeight: '1.3',
-                                marginBottom: '6px',
+                                fontSize:
+                                  '0.95rem',
+                                lineHeight:
+                                  '1.3',
+                                marginBottom:
+                                  '6px',
                               }}
                             >
                               {s.baslik}
@@ -579,60 +943,58 @@ export default function Kutuphane({ sources = [], error }) {
                             style={{
                               marginTop: '12px',
                               display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'flex-end',
+                              justifyContent:
+                                'space-between',
+                              alignItems:
+                                'flex-end',
                               gap: '8px',
                             }}
                           >
                             <div
                               className="meta"
                               style={{
-                                fontSize: '0.72rem',
+                                fontSize:
+                                  '0.72rem',
                                 margin: 0,
                               }}
                             >
                               {s.yazar}
-                              {s.yil ? ' · ' + s.yil : ''}
+                              {s.yil
+                                ? ' · ' +
+                                  s.yil
+                                : ''}
                             </div>
 
                             <div
                               style={{
                                 display: 'flex',
                                 gap: '8px',
-                                alignItems: 'center',
+                                alignItems:
+                                  'center',
                               }}
                             >
-                              <a
-                                href={getZoteroSaveUrl(s)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                title="Zotero kütüphanenize tam atıf olarak ekleyin"
-                                style={{
-                                  fontSize: '0.68rem',
-                                  fontFamily: 'var(--font-mono)',
-                                  color: 'var(--parchment-dim)',
-                                  textDecoration: 'none',
-                                  borderBottom: '1px dashed var(--line-strong)',
-                                  whiteSpace: 'nowrap',
-                                  paddingBottom: '1px',
-                                }}
-                              >
-                                Zotero ↗
-                              </a>
-
                               {s.pdf_url && (
                                 <a
-                                  href={s.pdf_url}
+                                  href={
+                                    s.pdf_url
+                                  }
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   style={{
-                                    fontSize: '0.68rem',
-                                    fontFamily: 'var(--font-mono)',
-                                    color: 'var(--gold-bright)',
-                                    textDecoration: 'none',
-                                    borderBottom: '1px dashed var(--gold)',
-                                    whiteSpace: 'nowrap',
-                                    paddingBottom: '1px',
+                                    fontSize:
+                                      '0.68rem',
+                                    fontFamily:
+                                      'var(--font-mono)',
+                                    color:
+                                      'var(--gold-bright)',
+                                    textDecoration:
+                                      'none',
+                                    borderBottom:
+                                      '1px dashed var(--gold)',
+                                    whiteSpace:
+                                      'nowrap',
+                                    paddingBottom:
+                                      '1px',
                                   }}
                                 >
                                   PDF ↗
@@ -647,9 +1009,16 @@ export default function Kutuphane({ sources = [], error }) {
 
                   {!error &&
                     sources.length > 0 &&
-                    filteredSources.length === 0 && (
-                      <p className="status" style={{ marginTop: 20 }}>
-                        Bu kriterlere uyan bir kaynak bulunmuyor.
+                    filteredSources.length ===
+                      0 && (
+                      <p
+                        className="status"
+                        style={{
+                          marginTop: 20,
+                        }}
+                      >
+                        Bu kriterlere uyan bir
+                        kaynak bulunmuyor.
                       </p>
                     )}
 
@@ -657,53 +1026,99 @@ export default function Kutuphane({ sources = [], error }) {
                     <div
                       style={{
                         display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
+                        justifyContent:
+                          'center',
+                        alignItems:
+                          'center',
                         gap: '8px',
                         marginTop: '32px',
                         paddingTop: '16px',
-                        borderTop: '1px solid var(--line)',
+                        borderTop:
+                          '1px solid var(--line)',
                       }}
                     >
                       <button
-                        onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                        disabled={currentPage === 1}
+                        onClick={() =>
+                          setCurrentPage((p) =>
+                            Math.max(
+                              p - 1,
+                              1
+                            )
+                          )
+                        }
+                        disabled={
+                          currentPage === 1
+                        }
                         style={{
-                          padding: '6px 12px',
-                          fontSize: '0.75rem',
-                          fontFamily: 'var(--font-mono)',
-                          background: 'transparent',
-                          border: '1px solid var(--line)',
-                          color: currentPage === 1 ? 'var(--parchment-dim)' : 'var(--gold-bright)',
-                          cursor: currentPage === 1 ? 'default' : 'pointer',
-                          opacity: currentPage === 1 ? 0.4 : 1,
-                          borderRadius: '4px',
+                          padding:
+                            '6px 12px',
+                          fontSize:
+                            '0.75rem',
+                          fontFamily:
+                            'var(--font-mono)',
+                          background:
+                            'transparent',
+                          border:
+                            '1px solid var(--line)',
+                          color:
+                            currentPage === 1
+                              ? 'var(--parchment-dim)'
+                              : 'var(--gold-bright)',
+                          cursor:
+                            currentPage === 1
+                              ? 'default'
+                              : 'pointer',
+                          opacity:
+                            currentPage === 1
+                              ? 0.4
+                              : 1,
+                          borderRadius:
+                            '4px',
                         }}
                       >
                         « Önceki
                       </button>
 
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      {Array.from(
+                        {
+                          length: totalPages,
+                        },
+                        (_, i) => i + 1
+                      ).map((page) => (
                         <button
                           key={page}
-                          onClick={() => setCurrentPage(page)}
+                          onClick={() =>
+                            setCurrentPage(
+                              page
+                            )
+                          }
                           style={{
-                            padding: '6px 10px',
-                            fontSize: '0.75rem',
-                            fontFamily: 'var(--font-mono)',
+                            padding:
+                              '6px 10px',
+                            fontSize:
+                              '0.75rem',
+                            fontFamily:
+                              'var(--font-mono)',
                             background:
-                              currentPage === page
+                              currentPage ===
+                              page
                                 ? 'rgba(183, 138, 52, 0.2)'
                                 : 'transparent',
                             border:
                               '1px solid ' +
-                              (currentPage === page ? 'var(--gold)' : 'var(--line)'),
+                              (currentPage ===
+                              page
+                                ? 'var(--gold)'
+                                : 'var(--line)'),
                             color:
-                              currentPage === page
+                              currentPage ===
+                              page
                                 ? 'var(--gold-bright)'
                                 : 'var(--parchment)',
-                            cursor: 'pointer',
-                            borderRadius: '4px',
+                            cursor:
+                              'pointer',
+                            borderRadius:
+                              '4px',
                           }}
                         >
                           {page}
@@ -711,18 +1126,46 @@ export default function Kutuphane({ sources = [], error }) {
                       ))}
 
                       <button
-                        onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                        disabled={currentPage === totalPages}
+                        onClick={() =>
+                          setCurrentPage((p) =>
+                            Math.min(
+                              p + 1,
+                              totalPages
+                            )
+                          )
+                        }
+                        disabled={
+                          currentPage ===
+                          totalPages
+                        }
                         style={{
-                          padding: '6px 12px',
-                          fontSize: '0.75rem',
-                          fontFamily: 'var(--font-mono)',
-                          background: 'transparent',
-                          border: '1px solid var(--line)',
-                          color: currentPage === totalPages ? 'var(--parchment-dim)' : 'var(--gold-bright)',
-                          cursor: currentPage === totalPages ? 'default' : 'pointer',
-                          opacity: currentPage === totalPages ? 0.4 : 1,
-                          borderRadius: '4px',
+                          padding:
+                            '6px 12px',
+                          fontSize:
+                            '0.75rem',
+                          fontFamily:
+                            'var(--font-mono)',
+                          background:
+                            'transparent',
+                          border:
+                            '1px solid var(--line)',
+                          color:
+                            currentPage ===
+                            totalPages
+                              ? 'var(--parchment-dim)'
+                              : 'var(--gold-bright)',
+                          cursor:
+                            currentPage ===
+                            totalPages
+                              ? 'default'
+                              : 'pointer',
+                          opacity:
+                            currentPage ===
+                            totalPages
+                              ? 0.4
+                              : 1,
+                          borderRadius:
+                            '4px',
                         }}
                       >
                         Sonraki »
@@ -736,7 +1179,7 @@ export default function Kutuphane({ sources = [], error }) {
         </div>
       </section>
     </Layout>
-   );
+  );
 }
 
 export async function getServerSideProps() {
