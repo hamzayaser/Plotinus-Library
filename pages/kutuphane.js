@@ -1,8 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { supabase } from '../lib/supabaseClient';
 
-// Admin panelindeki TAXONOMY haritası ile tam uyumlu eşleşme tablosu
 const CATEGORY_SUBCATEGORY_MAP = {
   'Ontoloji': ['Bir', 'Nous', 'Psyche', 'Emanasyon', 'Madde ve Kötülük'],
   'Epistemoloji': ['Diyalektik', 'Biliş Teorisi', 'İdealar Teorisi', 'Sezgi ve Kavrayış'],
@@ -26,48 +24,48 @@ export default function Kutuphane({ sources = [], error }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobile, setIsMobile] = useState(false);
 
-  // Sayfalama (Pagination) State'leri
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
 
+  // SSR Safe Window Listener
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
     const checkWidth = () => setIsMobile(window.innerWidth < 800);
     checkWidth();
+    
     window.addEventListener('resize', checkWidth);
     return () => window.removeEventListener('resize', checkWidth);
   }, []);
 
-  // Filtreler veya arama terimi değiştiğinde 1. sayfaya geri dön
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedCategory, selectedSubCategory, selectedDil, yilBaslangic, yilBitis, searchQuery]);
 
-  // Tek bir "Ad Soyad" ismini Zotero'nun beklediği creator formatına çevirir
   const parseNameToCreator = (fullName, creatorType) => {
     const trimmed = (fullName || '').trim();
     if (!trimmed) return null;
-    const parts = trimmed.split(' ');
+    
+    const parts = trimmed.split(/\s+/);
+    if (parts.length === 1) {
+      return { creatorType, lastName: parts[0], firstName: '' };
+    }
+    
     const lastName = parts.pop();
     const firstName = parts.join(' ');
     return { creatorType, firstName, lastName };
   };
 
-  // Noktalı virgül veya "&" ile ayrılmış birden fazla ismi ayrıştırır
-// (örn: "John Smith; Mary Jones" veya "Richard Dufour & Hanneke Teunissen")
-const parseNamesToCreators = (namesString, creatorType) => {
-  if (!namesString) return [];
-  return namesString
-    .split(/;|&/)
-    .map((n) => n.trim())
-    .filter(Boolean)
-    .map((n) => parseNameToCreator(n, creatorType))
-    .filter(Boolean);
-};
+  const parseNamesToCreators = (namesString, creatorType) => {
+    if (!namesString) return [];
+    return namesString
+      .split(/;|&/)
+      .map((n) => n.trim())
+      .filter(Boolean)
+      .map((n) => parseNameToCreator(n, creatorType))
+      .filter(Boolean);
+  };
 
-  // Zotero İçin Tam Künye Bağlantısı Oluşturucu
-  // Ayrı sütunları (yayinevi, yayin_yeri, isbn, cilt, sayi, sayfa_araligi) kullanır.
-  // Tip makale ise dergi adı publicationTitle'a, kitap ise publisher'a gider.
-  // Yazar/çevirmen "Ad Soyad" formatında ayrıştırılıp Zotero creator alanlarına eklenir.
   const getZoteroSaveUrl = (source) => {
     const baseUrl = 'https://www.zotero.org/save';
     const tip = (source.tip || 'book').toLowerCase();
@@ -77,33 +75,34 @@ const parseNamesToCreators = (namesString, creatorType) => {
     const translators = parseNamesToCreators(source.cevirmen, 'translator');
     const creators = [...authors, ...translators];
 
-    const params = new URLSearchParams({
-      type: isArticle ? 'journalArticle' : 'book',
-      title: source.baslik || '',
-      date: source.yil || '',
-      language: source.dil || '',
-      place: source.yayin_yeri || '',
-      volume: source.cilt || '',
-      issue: source.sayi || '',
-      pages: source.sayfa_araligi || '',
-      isbn: source.isbn || '',
-      url: source.pdf_url || '',
-    });
+    const queryParts = [
+      `type=${encodeURIComponent(isArticle ? 'journalArticle' : 'book')}`,
+      `title=${encodeURIComponent(source.baslik || '')}`,
+      `date=${encodeURIComponent(source.yil || '')}`,
+      `language=${encodeURIComponent(source.dil || '')}`,
+      `place=${encodeURIComponent(source.yayin_yeri || '')}`,
+      `volume=${encodeURIComponent(source.cilt || '')}`,
+      `issue=${encodeURIComponent(source.sayi || '')}`,
+      `pages=${encodeURIComponent(source.sayfa_araligi || '')}`,
+      `isbn=${encodeURIComponent(source.isbn || '')}`,
+      `url=${encodeURIComponent(source.pdf_url || '')}`,
+    ];
 
     if (isArticle) {
-      params.append('publicationTitle', source.yayinevi || '');
+      queryParts.push(`publicationTitle=${encodeURIComponent(source.yayinevi || '')}`);
     } else {
-      params.append('publisher', source.yayinevi || '');
+      queryParts.push(`publisher=${encodeURIComponent(source.yayinevi || '')}`);
     }
 
-    // Her creator'ı ayrı ayrı ekle (Zotero save endpoint'i creator[0][firstName] formatını bekler)
     creators.forEach((c, i) => {
-      params.append(`creator[${i}][creatorType]`, c.creatorType);
-      params.append(`creator[${i}][firstName]`, c.firstName);
-      params.append(`creator[${i}][lastName]`, c.lastName);
+      queryParts.push(`creator[${i}][creatorType]=${encodeURIComponent(c.creatorType)}`);
+      if (c.firstName) {
+        queryParts.push(`creator[${i}][firstName]=${encodeURIComponent(c.firstName)}`);
+      }
+      queryParts.push(`creator[${i}][lastName]=${encodeURIComponent(c.lastName)}`);
     });
 
-    return `${baseUrl}?${params.toString()}`;
+    return `${baseUrl}?${queryParts.join('&')}`;
   };
 
   const getSourceCategories = (source) => {
@@ -154,7 +153,6 @@ const parseNamesToCreators = (namesString, creatorType) => {
     sources.forEach((s) => {
       if (getSourceCategories(s).includes(selectedCategory)) {
         getSourceSubCategories(s).forEach((sub) => {
-          // Seçili ana kategoriye TAXONOMY haritasında bağlı olan alt kategorileri ayıklar
           if (!allowedSubCats || allowedSubCats.includes(sub)) {
             counts[sub] = (counts[sub] || 0) + 1;
           }
@@ -576,7 +574,6 @@ const parseNamesToCreators = (namesString, creatorType) => {
                             </h3>
                           </div>
 
-                          {/* Kart Alt Bilgisi (Sade) ve Sağ Taraf Bağlantıları */}
                           <div
                             style={{
                               marginTop: '12px',
@@ -604,7 +601,6 @@ const parseNamesToCreators = (namesString, creatorType) => {
                                 alignItems: 'center',
                               }}
                             >
-                              {/* Zotero'ya Tam Künye Aktarma Linki */}
                               <a
                                 href={getZoteroSaveUrl(s)}
                                 target="_blank"

@@ -369,8 +369,8 @@ function SourcesAdmin({ password }) {
     setStatus(null);
     const payload = {
       ...addForm,
-      kategori: Array.isArray(addForm.kategori) ? addForm.kategori.join(', ') : addForm.kategori,
-      alt_kategori: Array.isArray(addForm.alt_kategori) ? addForm.alt_kategori.join(', ') : addForm.alt_kategori,
+      kategori: Array.isArray(addForm.kategori) ? addForm.kategori : [],
+      alt_kategori: Array.isArray(addForm.alt_kategori) ? addForm.alt_kategori : [],
     };
 
     const res = await fetch('/api/admin/sources', {
@@ -393,8 +393,8 @@ function SourcesAdmin({ password }) {
     setModalStatus(null);
     const payload = {
       ...editForm,
-      kategori: Array.isArray(editForm.kategori) ? editForm.kategori.join(', ') : editForm.kategori,
-      alt_kategori: Array.isArray(editForm.alt_kategori) ? editForm.alt_kategori.join(', ') : editForm.alt_kategori,
+      kategori: Array.isArray(editForm.kategori) ? editForm.kategori : [],
+      alt_kategori: Array.isArray(editForm.alt_kategori) ? editForm.alt_kategori : [],
     };
 
     const res = await fetch('/api/admin/sources', {
