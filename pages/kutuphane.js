@@ -2,6 +2,21 @@ import { useState, useMemo, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/supabaseClient';
 
+// Admin panelindeki TAXONOMY haritası ile tam uyumlu eşleşme tablosu
+const CATEGORY_SUBCATEGORY_MAP = {
+  'Ontoloji': ['Bir', 'Nous', 'Psyche', 'Emanasyon', 'Madde ve Kötülük'],
+  'Epistemoloji': ['Diyalektik', 'Biliş Teorisi', 'İdealar Teorisi', 'Sezgi ve Kavrayış'],
+  'Etik': ['Erdem', 'Ruhun Arınması', 'Mutluluk', 'İrade ve Özgürlük', 'Siyaset Felsefesi'],
+  'Estetik': ['Güzellik', 'Sanat ve Taklit', 'Orantı ve Form'],
+  'Mistisizm': ['Vecd ve İttihad', 'Hint Mistisizmi', 'Teürji ve Arınma'],
+  'Mitoloji ve Metafor': ['Semboller', 'Mitolojik Anlatılar', 'Alegori'],
+  'Mukayeseli Çalışmalar': ['Felsefe-Din Karşılaştırması', 'Doğu-Batı Karşılaştırması'],
+  'Etkilenim': ['Pre-Sokratikler', 'Gnostisizm', 'Platon ve Platoncu Gelenek', 'Aristoteles ve Yorumcuları', 'Stoacılık ve Orta Platonculuk', 'Doğu Doktrinleri'],
+  'Etki': ['Geç Antik Çağ ve Proklos', 'İslam Felsefesi', 'Rönesans Platonculuğu', 'Alman İdealizmi', 'Tasavvuf'],
+  'Türkçe Literatür': ['Türkçeye Kazandırılan Eserler'],
+  'Enneadlar': ['Ana Eser', 'Çeviriler'],
+};
+
 export default function Kutuphane({ sources = [], error }) {
   const [selectedCategory, setSelectedCategory] = useState('Tümü');
   const [selectedSubCategory, setSelectedSubCategory] = useState('Tümü');
@@ -13,7 +28,7 @@ export default function Kutuphane({ sources = [], error }) {
 
   // Sayfalama (Pagination) State'leri
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 12; // Sayfa başına gösterilecek eser sayısı
+  const itemsPerPage = 12;
 
   useEffect(() => {
     const checkWidth = () => setIsMobile(window.innerWidth < 800);
@@ -70,10 +85,15 @@ export default function Kutuphane({ sources = [], error }) {
     if (selectedCategory === 'Tümü') return [];
 
     const counts = {};
+    const allowedSubCats = CATEGORY_SUBCATEGORY_MAP[selectedCategory];
+
     sources.forEach((s) => {
       if (getSourceCategories(s).includes(selectedCategory)) {
         getSourceSubCategories(s).forEach((sub) => {
-          counts[sub] = (counts[sub] || 0) + 1;
+          // Seçili ana kategoriye TAXONOMY haritasında bağlı olan alt kategorileri ayıklar
+          if (!allowedSubCats || allowedSubCats.includes(sub)) {
+            counts[sub] = (counts[sub] || 0) + 1;
+          }
         });
       }
     });
@@ -97,7 +117,6 @@ export default function Kutuphane({ sources = [], error }) {
     ];
   }, [sources, selectedCategory]);
 
-  // Dil Seçenekleri (İstediğin diller eklendi + dinamik gelen diğer diller)
   const dilOptions = useMemo(() => {
     const predefinedLangs = [
       'Türkçe',
@@ -119,7 +138,6 @@ export default function Kutuphane({ sources = [], error }) {
     ];
   }, [sources]);
 
-  // Filtrelenmiş Sonuçlar (Tüm veritabanı üzerinden süzülür)
   const filteredSources = useMemo(() => {
     const q = searchQuery.trim().toLocaleLowerCase('tr');
 
@@ -174,7 +192,6 @@ export default function Kutuphane({ sources = [], error }) {
     searchQuery,
   ]);
 
-  // Sayfalama Hesaplamaları
   const totalPages = Math.ceil(filteredSources.length / itemsPerPage);
   const paginatedSources = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -550,7 +567,6 @@ export default function Kutuphane({ sources = [], error }) {
                       </p>
                     )}
 
-                  {/* Sayfalama (Pagination) Kontrolleri */}
                   {totalPages > 1 && (
                     <div
                       style={{
