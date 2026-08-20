@@ -1387,11 +1387,10 @@ export default function Kutuphane({ sources = [], error }) {
       display: 'flex',
       gap: '8px',
       alignItems: 'center',
-    }}
-  >
-                              >
-                                {/* ==================================================
-                                    ZOTERO
+
+                               >
+                                  {/* ==================================================
+                                      ZOTERO
 
                                     Buradaki "s" yalnızca bu kutunun
                                     Supabase kaydıdır.
