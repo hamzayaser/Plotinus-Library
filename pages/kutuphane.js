@@ -1349,50 +1349,46 @@ export default function Kutuphane({ sources = [], error }) {
                               </h3>
                             </div>
 
-                            {/* ALT BİLGİ */}
-                            <div
-                              style={{
-                                marginTop:
-                                  '12px',
-                                display:
-                                  'flex',
-                                justifyContent:
-                                  'space-between',
-                                alignItems:
-                                  'flex-end',
-                                gap: '8px',
-                              }}
-                            >
-                              {/* YAZAR + YIL */}
-                              <div
-                                className="meta"
-                                style={{
-                                  fontSize:
-                                    '0.72rem',
-                                  margin: 0,
-                                }}
-                              >
-                                {s.yazar}
+                           {/* ALT BİLGİ */}
+<div
+  style={{
+    marginTop: '12px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    gap: '8px',
+  }}
+>
+  {/* YAZAR + YIL + ESER TİPİ */}
+  <div
+    className="meta"
+    style={{
+      fontSize: '0.72rem',
+      margin: 0,
+    }}
+  >
+    {s.yazar}
 
-                                {s.yil
-                                  ? ' · ' +
-                                    s.yil
-                                  : ''}
-                              </div>
+    {s.yil ? ' · ' + s.yil : ''}
 
-                              {/* ==================================================
-                                  ZOTERO + PDF
-                                 ================================================== */}
+    {/* Eser Tipi Alanı */}
+    {s.tur ? (
+      <span style={{ color: '#d4af37', marginLeft: '4px' }}>
+        {' · ' + s.tur}
+      </span>
+    ) : ''}
+  </div>
 
-                              <div
-                                style={{
-                                  display:
-                                    'flex',
-                                  gap:
-                                    '8px',
-                                  alignItems:
-                                    'center',
-                                }}
+  {/* ==================================================
+      ZOTERO + PDF
+     ================================================== */}
+  <div
+    style={{
+      display: 'flex',
+      gap: '8px',
+      alignItems: 'center',
+    }}
+  >
                               >
                                 {/* ==================================================
                                     ZOTERO
