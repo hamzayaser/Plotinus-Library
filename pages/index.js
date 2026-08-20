@@ -1,13 +1,82 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Layout, { EmanationRings } from '../components/Layout';
 import Link from 'next/link';
+import { supabase } from '../lib/supabaseClient'; // Supabase istemci yolunuza göre kontrol edin
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [allSources, setAllSources] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  
+  const searchRef = useRef(null);
   const router = useRouter();
 
-  const handleSearch = (e) => {
+  // Tüm kaynakları canlı arama için başlangıçta çek
+  useEffect(() => {
+    async function fetchSources() {
+      try {
+        const { data, error } = await supabase
+          .from('sources') // Veritabanı tablo adınız
+          .select('*');
+        if (!error && data) {
+          setAllSources(data);
+        }
+      } catch (err) {
+        console.error('Kaynaklar çekilirken hata oluştu:', err);
+      }
+    }
+    fetchSources();
+  }, []);
+
+  // Arama metni değiştikçe eşleşen içerik ve konuları filtrele
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      setShowDropdown(false);
+      return;
+    }
+
+    setIsLoading(true);
+    const query = searchQuery.toLocaleLowerCase('tr').trim();
+
+    const filtered = allSources.filter((source) => {
+      const baslik = (source.baslik || '').toLocaleLowerCase('tr');
+      const yazar = (source.yazar || '').toLocaleLowerCase('tr');
+      const konu = Array.isArray(source.alt_kategori)
+        ? source.alt_kategori.join(' ').toLocaleLowerCase('tr')
+        : (source.alt_kategori || '').toLocaleLowerCase('tr');
+      const anaKategori = Array.isArray(source.kategori)
+        ? source.kategori.join(' ').toLocaleLowerCase('tr')
+        : (source.kategori || '').toLocaleLowerCase('tr');
+
+      return (
+        baslik.includes(query) ||
+        yazar.includes(query) ||
+        konu.includes(query) ||
+        anaKategori.includes(query)
+      );
+    });
+
+    setSearchResults(filtered.slice(0, 6)); // İlk 6 canlı sonucu göster
+    setShowDropdown(true);
+    setIsLoading(false);
+  }, [searchQuery, allSources]);
+
+  // Arama kutusu dışına tıklandığında dropdown'ı kapat
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/kutuphane?q=${encodeURIComponent(searchQuery.trim())}`);
@@ -28,52 +97,115 @@ export default function Home() {
           Plotinos Kütüphanesi, başta Enneadlar olmak üzere, Plotinos düşüncesi üzerine hazırlanmış kitap, tez ve makalelerden müteşekkil kaynakçamıza erişim sağlayan bir portal sunmaktadır.
         </p>
 
-        {/* Arama Çubuğu */}
-        <form 
-          onSubmit={handleSearch}
-          style={{
-            maxWidth: '560px',
-            margin: '32px auto 0 auto',
-            display: 'flex',
-            gap: '8px',
-            position: 'relative',
-            zIndex: 2
-          }}
-        >
-          <input
-            type="text"
-            placeholder="Kütüphanede kaynak, yazar veya konu ara..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              flex: 1,
-              padding: '12px 18px',
-              borderRadius: '8px',
-              border: '1px solid rgba(212, 175, 55, 0.3)',
-              backgroundColor: 'rgba(18, 17, 16, 0.8)',
-              color: '#fff',
-              fontSize: '0.95rem',
-              outline: 'none',
-              backdropFilter: 'blur(4px)'
-            }}
-          />
-          <button
-            type="submit"
-            style={{
-              padding: '12px 24px',
-              borderRadius: '8px',
-              border: 'none',
-              backgroundColor: '#d4af37',
-              color: '#000',
-              fontWeight: '600',
-              cursor: 'pointer',
-              fontSize: '0.95rem',
-              transition: 'opacity 0.2s'
-            }}
+        {/* Canlı Arama Çubuğu */}
+        <div ref={searchRef} style={{ maxWidth: '600px', margin: '32px auto 0 auto', position: 'relative', zIndex: 10 }}>
+          <form 
+            onSubmit={handleSearchSubmit}
+            style={{ display: 'flex', gap: '8px' }}
           >
-            Ara
-          </button>
-        </form>
+            <input
+              type="text"
+              placeholder="Eser adı, yazar veya konu başlığı ara..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => searchQuery.trim() && setShowDropdown(true)}
+              style={{
+                flex: 1,
+                padding: '14px 20px',
+                borderRadius: '8px',
+                border: '1px solid rgba(212, 175, 55, 0.4)',
+                backgroundColor: 'rgba(18, 17, 16, 0.95)',
+                color: '#fff',
+                fontSize: '0.95rem',
+                outline: 'none',
+                backdropFilter: 'blur(6px)'
+              }}
+            />
+            <button
+              type="submit"
+              style={{
+                padding: '14px 28px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor: '#d4af37',
+                color: '#000',
+                fontWeight: '600',
+                cursor: 'pointer',
+                fontSize: '0.95rem'
+              }}
+            >
+              Ara
+            </button>
+          </form>
+
+          {/* Açılır Canlı Sonuç Penceresi */}
+          {showDropdown && searchQuery.trim() && (
+            <div style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              right: 0,
+              marginTop: '8px',
+              backgroundColor: '#161513',
+              border: '1px solid rgba(212, 175, 55, 0.3)',
+              borderRadius: '8px',
+              boxShadow: '0 12px 32px rgba(0,0,0,0.8)',
+              maxHeight: '360px',
+              overflowY: 'auto',
+              textAlign: 'left',
+              zIndex: 20
+            }}>
+              {searchResults.length > 0 ? (
+                <div>
+                  {searchResults.map((source) => (
+                    <div
+                      key={source.id}
+                      onClick={() => router.push(`/kutuphane?q=${encodeURIComponent(source.baslik)}`)}
+                      style={{
+                        padding: '12px 16px',
+                        borderBottom: '1px solid rgba(255,255,255,0.05)',
+                        cursor: 'pointer',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(212, 175, 55, 0.1)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <div style={{ color: '#fff', fontWeight: '500', fontSize: '0.95rem' }}>
+                        {source.baslik}
+                      </div>
+                      <div style={{ color: '#a0a0a0', fontSize: '0.82rem', marginTop: '4px', display: 'flex', gap: '12px' }}>
+                        {source.yazar && <span>✍️ {source.yazar}</span>}
+                        {source.alt_kategori && (
+                          <span style={{ color: '#d4af37' }}>
+                            🏷️ {Array.isArray(source.alt_kategori) ? source.alt_kategori.join(', ') : source.alt_kategori}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  <div
+                    onClick={handleSearchSubmit}
+                    style={{
+                      padding: '12px',
+                      textAlign: 'center',
+                      color: '#d4af37',
+                      fontSize: '0.85rem',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      backgroundColor: 'rgba(212, 175, 55, 0.05)'
+                    }}
+                  >
+                    Tüm sonuçları kütüphanede gör ({searchResults.length}+) →
+                  </div>
+                </div>
+              ) : (
+                <div style={{ padding: '16px', color: '#888', textAlign: 'center', fontSize: '0.9rem' }}>
+                  Aramanızla eşleşen bir eser veya konu bulunamadı.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </section>
 
       <section className="section">
