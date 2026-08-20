@@ -96,21 +96,6 @@ export default function Kutuphane({ sources = [], error }) {
    * ============================================================
    */
 
-  /*
-   * İsim ayrıştırma.
-   *
-   * Tek kelimelik isim:
-   * Plotinos
-   *
-   * Zotero için:
-   * { name: "Plotinos" }
-   *
-   * Birden fazla kelimeli isim:
-   * Pierre Hadot
-   *
-   * Zotero için:
-   * { firstName: "Pierre", lastName: "Hadot" }
-   */
   const parseNameToCreator = (fullName, creatorType) => {
     const trimmed = (fullName || '').trim();
 
@@ -135,15 +120,6 @@ export default function Kutuphane({ sources = [], error }) {
     };
   };
 
-  /*
-   * Yazar / çevirmen alanlarını ayrıştırır.
-   *
-   * Desteklenen ayraçlar:
-   * ;
-   * ,
-   * &
-   * ve
-   */
   const parseNamesToCreators = (namesString, creatorType) => {
     if (!namesString) return [];
 
@@ -159,16 +135,8 @@ export default function Kutuphane({ sources = [], error }) {
    * ============================================================
    * COinS
    * ============================================================
-   *
-   * Her kutunun kendi source kaydından COinS üretir.
-   *
-   * Yani:
-   *
-   * Kutu A -> source A -> yalnızca A metadata'sı
-   * Kutu B -> source B -> yalnızca B metadata'sı
-   *
-   * Bütün eserler tek kayda dönüştürülmez.
    */
+
   const getCOinSFormat = (source) => {
     const tip = (source.tip || 'book').toLowerCase();
 
@@ -229,9 +197,6 @@ export default function Kutuphane({ sources = [], error }) {
       params.set('rft.pages', source.sayfa_araligi);
     }
 
-    /*
-     * Yazarlar
-     */
     const authors = parseNamesToCreators(
       source.yazar,
       'author'
@@ -254,9 +219,6 @@ export default function Kutuphane({ sources = [], error }) {
       }
     });
 
-    /*
-     * Çevirmenler
-     */
     const translators = parseNamesToCreators(
       source.cevirmen,
       'translator'
@@ -286,21 +248,9 @@ export default function Kutuphane({ sources = [], error }) {
    * ============================================================
    * BIBTEX OLUŞTURMA
    * ============================================================
-   *
-   * Buradaki source SADECE tıklanan kutunun kaydıdır.
-   *
-   * source.id
-   *     ↓
-   * Supabase sources kaydı
-   *     ↓
-   * bütün bibliyografik alanlar
-   *     ↓
-   * tek BibTeX kaydı
    */
+
   const createBibTeX = (source) => {
-    /*
-     * BibTeX özel karakterlerini güvenli hale getirir.
-     */
     const escapeBibTeX = (value) => {
       if (value === null || value === undefined) {
         return '';
@@ -315,17 +265,6 @@ export default function Kutuphane({ sources = [], error }) {
         .replace(/}/g, '\\}');
     };
 
-    /*
-     * Yazarları BibTeX formatına çevirir.
-     *
-     * Örnek:
-     *
-     * "Pierre Hadot; John Dillon"
-     *
-     * ->
-     *
-     * Pierre Hadot and John Dillon
-     */
     const getBibTeXAuthors = (namesString) => {
       if (!namesString) return '';
 
@@ -343,14 +282,6 @@ export default function Kutuphane({ sources = [], error }) {
       tip.includes('journal') ||
       tip === 'journalarticle';
 
-    /*
-     * Her eserin benzersiz BibTeX anahtarı.
-     *
-     * Örneğin:
-     * source_15
-     * source_28
-     * source_104
-     */
     const citationKey = `source_${source.id}`;
 
     const entryType = isArticle
@@ -359,132 +290,84 @@ export default function Kutuphane({ sources = [], error }) {
 
     let bibtex = `@${entryType}{${citationKey},\n`;
 
-    /*
-     * Başlık
-     */
     if (source.baslik) {
       bibtex += `  title = {${escapeBibTeX(
         source.baslik
       )}},\n`;
     }
 
-    /*
-     * Yazar
-     */
     if (source.yazar) {
       bibtex += `  author = {${escapeBibTeX(
         getBibTeXAuthors(source.yazar)
       )}},\n`;
     }
 
-    /*
-     * Çevirmen
-     *
-     * BibTeX'te translator alanı standart olmadığı için
-     * editor alanında tutuluyor.
-     */
     if (source.cevirmen) {
       bibtex += `  editor = {${escapeBibTeX(
         getBibTeXAuthors(source.cevirmen)
       )}},\n`;
     }
 
-    /*
-     * Yıl
-     */
     if (source.yil) {
       bibtex += `  year = {${escapeBibTeX(
         source.yil
       )}},\n`;
     }
 
-    /*
-     * Yayınevi
-     */
     if (source.yayinevi && !isArticle) {
       bibtex += `  publisher = {${escapeBibTeX(
         source.yayinevi
       )}},\n`;
     }
 
-    /*
-     * Makale ise dergi adı
-     */
     if (source.yayinevi && isArticle) {
       bibtex += `  journal = {${escapeBibTeX(
         source.yayinevi
       )}},\n`;
     }
 
-    /*
-     * Yayın yeri
-     */
     if (source.yayin_yeri) {
       bibtex += `  address = {${escapeBibTeX(
         source.yayin_yeri
       )}},\n`;
     }
 
-    /*
-     * Cilt
-     */
     if (source.cilt) {
       bibtex += `  volume = {${escapeBibTeX(
         source.cilt
       )}},\n`;
     }
 
-    /*
-     * Sayı
-     */
     if (source.sayi) {
       bibtex += `  number = {${escapeBibTeX(
         source.sayi
       )}},\n`;
     }
 
-    /*
-     * Sayfa aralığı
-     */
     if (source.sayfa_araligi) {
       bibtex += `  pages = {${escapeBibTeX(
         source.sayfa_araligi
       )}},\n`;
     }
 
-    /*
-     * ISBN
-     */
     if (source.isbn) {
       bibtex += `  isbn = {${escapeBibTeX(
         source.isbn
       )}},\n`;
     }
 
-    /*
-     * Dil
-     */
     if (source.dil) {
       bibtex += `  language = {${escapeBibTeX(
         source.dil
       )}},\n`;
     }
 
-    /*
-     * PDF / kaynak URL'si
-     */
     if (source.pdf_url) {
       bibtex += `  url = {${escapeBibTeX(
         source.pdf_url
       )}},\n`;
     }
 
-    /*
-     * Supabase ID'sini kaydın içine de koyuyoruz.
-     *
-     * Böylece Zotero'ya aktarıldığında bu kaydın
-     * hangi Kütüphane kaydından geldiği anlaşılabilir.
-     */
     bibtex += `  note = {Library source ID: ${escapeBibTeX(
       source.id
     )}}\n`;
@@ -498,11 +381,8 @@ export default function Kutuphane({ sources = [], error }) {
    * ============================================================
    * ZOTERO BUTONU
    * ============================================================
-   *
-   * SADECE TIKLANAN source kaydını BibTeX olarak oluşturur.
-   *
-   * Başka eserler dahil edilmez.
    */
+
   const downloadBibTeXForZotero = (source) => {
     if (!source || !source.id) {
       return;
@@ -889,13 +769,10 @@ export default function Kutuphane({ sources = [], error }) {
                     ? 'column'
                     : 'row',
                   gap: '28px',
-                  alignItems:
-                    'flex-start',
+                  alignItems: 'flex-start',
                 }}
               >
-                {/* ==================================================
-                    SOL MENÜ
-                   ================================================== */}
+                {/* SOL MENÜ */}
 
                 <aside
                   style={{
@@ -908,11 +785,9 @@ export default function Kutuphane({ sources = [], error }) {
                   <div
                     style={{
                       display: 'flex',
-                      flexDirection:
-                        'column',
+                      flexDirection: 'column',
                       gap: '4px',
-                      marginBottom:
-                        '24px',
+                      marginBottom: '24px',
                     }}
                   >
                     {categoriesWithCounts.map(
@@ -926,10 +801,8 @@ export default function Kutuphane({ sources = [], error }) {
                             }
                             style={{
                               width: '100%',
-                              textAlign:
-                                'left',
-                              padding:
-                                '6px 12px',
+                              textAlign: 'left',
+                              padding: '6px 12px',
                               border:
                                 '1px solid ' +
                                 (selectedCategory ===
@@ -946,12 +819,10 @@ export default function Kutuphane({ sources = [], error }) {
                                 name
                                   ? 'var(--gold-bright)'
                                   : 'var(--parchment)',
-                              cursor:
-                                'pointer',
+                              cursor: 'pointer',
                               fontFamily:
                                 'var(--font-mono)',
-                              fontSize:
-                                '0.72rem',
+                              fontSize: '0.72rem',
                               transition:
                                 'all 0.2s ease',
                             }}
@@ -973,17 +844,12 @@ export default function Kutuphane({ sources = [], error }) {
                               0 && (
                               <div
                                 style={{
-                                  display:
-                                    'flex',
-                                  flexDirection:
-                                    'column',
+                                  display: 'flex',
+                                  flexDirection: 'column',
                                   gap: '3px',
-                                  marginTop:
-                                    '4px',
-                                  marginBottom:
-                                    '4px',
-                                  paddingLeft:
-                                    '10px',
+                                  marginTop: '4px',
+                                  marginBottom: '4px',
+                                  paddingLeft: '10px',
                                   borderLeft:
                                     '1px solid var(--gold)',
                                 }}
@@ -1000,12 +866,10 @@ export default function Kutuphane({ sources = [], error }) {
                                         )
                                       }
                                       style={{
-                                        textAlign:
-                                          'left',
+                                        textAlign: 'left',
                                         padding:
                                           '3px 8px',
-                                        border:
-                                          'none',
+                                        border: 'none',
                                         backgroundColor:
                                           selectedSubCategory ===
                                           sub.name
@@ -1045,43 +909,38 @@ export default function Kutuphane({ sources = [], error }) {
                   </div>
 
                   {/* FİLTRELER */}
+
                   <div
                     style={{
                       borderTop:
                         '1px solid var(--line)',
-                      paddingTop:
-                        '14px',
+                      paddingTop: '14px',
                     }}
                   >
                     <div
                       style={{
                         fontFamily:
                           'var(--font-mono)',
-                        fontSize:
-                          '0.68rem',
+                        fontSize: '0.68rem',
                         opacity: 0.6,
-                        marginBottom:
-                          '8px',
+                        marginBottom: '8px',
                       }}
                     >
                       FİLTRELER
                     </div>
 
                     {/* YIL */}
+
                     <div
                       style={{
-                        marginBottom:
-                          '12px',
+                        marginBottom: '12px',
                       }}
                     >
                       <label
                         style={{
-                          fontSize:
-                            '0.7rem',
-                          display:
-                            'block',
-                          marginBottom:
-                            '4px',
+                          fontSize: '0.7rem',
+                          display: 'block',
+                          marginBottom: '4px',
                         }}
                       >
                         Yıl Aralığı
@@ -1089,8 +948,7 @@ export default function Kutuphane({ sources = [], error }) {
 
                       <div
                         style={{
-                          display:
-                            'flex',
+                          display: 'flex',
                           gap: '4px',
                         }}
                       >
@@ -1102,76 +960,58 @@ export default function Kutuphane({ sources = [], error }) {
                           }
                           onChange={(e) =>
                             setYilBaslangic(
-                              e.target
-                                .value
+                              e.target.value
                             )
                           }
                           style={{
-                            width:
-                              '50%',
-                            fontSize:
-                              '0.7rem',
-                            padding:
-                              '4px 6px',
+                            width: '50%',
+                            fontSize: '0.7rem',
+                            padding: '4px 6px',
                           }}
                         />
 
                         <input
                           type="number"
                           placeholder="Bitiş"
-                          value={
-                            yilBitis
-                          }
+                          value={yilBitis}
                           onChange={(e) =>
                             setYilBitis(
-                              e.target
-                                .value
+                              e.target.value
                             )
                           }
                           style={{
-                            width:
-                              '50%',
-                            fontSize:
-                              '0.7rem',
-                            padding:
-                              '4px 6px',
+                            width: '50%',
+                            fontSize: '0.7rem',
+                            padding: '4px 6px',
                           }}
                         />
                       </div>
                     </div>
 
                     {/* DİL */}
+
                     <div>
                       <label
                         style={{
-                          fontSize:
-                            '0.7rem',
-                          display:
-                            'block',
-                          marginBottom:
-                            '4px',
+                          fontSize: '0.7rem',
+                          display: 'block',
+                          marginBottom: '4px',
                         }}
                       >
                         Dil
                       </label>
 
                       <select
-                        value={
-                          selectedDil
-                        }
+                        value={selectedDil}
                         onChange={(e) =>
                           setSelectedDil(
-                            e.target
-                              .value
+                            e.target.value
                           )
                         }
                         style={{
-                          width:
-                            '100%',
-                          fontSize:
-                            '0.7rem',
-                          padding:
-                            '4px 6px',
+                          width: '100%',
+                          fontSize: '0.7rem',
+                          padding: '4px 6px',
                         }}
                       >
                         {dilOptions.map(
@@ -1189,9 +1029,7 @@ export default function Kutuphane({ sources = [], error }) {
                   </div>
                 </aside>
 
-                {/* ==================================================
-                    KAYNAK KARTLARI
-                   ================================================== */}
+                {/* KAYNAK KARTLARI */}
 
                 <div
                   style={{
@@ -1201,8 +1039,7 @@ export default function Kutuphane({ sources = [], error }) {
                 >
                   <div
                     style={{
-                      display:
-                        'grid',
+                      display: 'grid',
                       gridTemplateColumns:
                         isMobile
                           ? '1fr'
@@ -1222,11 +1059,6 @@ export default function Kutuphane({ sources = [], error }) {
                             s
                           );
 
-                        /*
-                         * BU KARTIN COinS VERİSİ.
-                         *
-                         * Sadece s kaydı.
-                         */
                         const coins =
                           getCOinSFormat(
                             s
@@ -1237,21 +1069,17 @@ export default function Kutuphane({ sources = [], error }) {
                             className="card"
                             key={s.id}
                             style={{
-                              display:
-                                'flex',
+                              display: 'flex',
                               flexDirection:
                                 'column',
                               justifyContent:
                                 'space-between',
-                              padding:
-                                '16px',
+                              padding: '16px',
                               minHeight:
                                 '150px',
                             }}
                           >
-                            {/* ==================================================
-                                HER KART İÇİN AYRI COinS
-                               ================================================== */}
+                            {/* COinS */}
 
                             <span
                               className="Z3988"
@@ -1265,6 +1093,7 @@ export default function Kutuphane({ sources = [], error }) {
 
                             <div>
                               {/* ETİKETLER */}
+
                               <div
                                 style={{
                                   display:
@@ -1293,9 +1122,7 @@ export default function Kutuphane({ sources = [], error }) {
                                           '2px 6px',
                                       }}
                                     >
-                                      {
-                                        cat
-                                      }
+                                      {cat}
                                     </span>
                                   )
                                 )}
@@ -1324,15 +1151,14 @@ export default function Kutuphane({ sources = [], error }) {
                                           'var(--parchment-dim)',
                                       }}
                                     >
-                                      {
-                                        sub
-                                      }
+                                      {sub}
                                     </span>
                                   )
                                 )}
                               </div>
 
                               {/* BAŞLIK */}
+
                               <h3
                                 style={{
                                   fontSize:
@@ -1343,58 +1169,69 @@ export default function Kutuphane({ sources = [], error }) {
                                     '6px',
                                 }}
                               >
-                                {
-                                  s.baslik
-                                }
+                                {s.baslik}
                               </h3>
                             </div>
 
-                           {/* ALT BİLGİ */}
-<div
-  style={{
-    marginTop: '12px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    gap: '8px',
-  }}
->
-  {/* YAZAR + YIL + ESER TİPİ */}
-  <div
-    className="meta"
-    style={{
-      fontSize: '0.72rem',
-      margin: 0,
-    }}
-  >
-    {s.yazar}
+                            {/* ALT BİLGİ */}
 
-    {s.yil ? ' · ' + s.yil : ''}
+                            <div
+                              style={{
+                                marginTop: '12px',
+                                display: 'flex',
+                                justifyContent:
+                                  'space-between',
+                                alignItems:
+                                  'flex-end',
+                                gap: '8px',
+                              }}
+                            >
+                              {/* YAZAR + YIL + ESER TİPİ */}
 
-    {/* Eser Tipi Alanı */}
-    {s.tur ? (
-      <span style={{ color: '#d4af37', marginLeft: '4px' }}>
-        {' · ' + s.tur}
-      </span>
-    ) : ''}
-  </div>
+                              <div
+                                className="meta"
+                                style={{
+                                  fontSize:
+                                    '0.72rem',
+                                  margin: 0,
+                                }}
+                              >
+                                {s.yazar}
 
-  {/* ==================================================
-      ZOTERO + PDF
-     ================================================== */}
-  <div
-    style={{
-      display: 'flex',
-      gap: '8px',
-      alignItems: 'center',
+                                {s.yil
+                                  ? ' · ' +
+                                    s.yil
+                                  : ''}
 
-                               >
-                                  {/* ==================================================
-                                      ZOTERO
+                                {s.tur ? (
+                                  <span
+                                    style={{
+                                      color:
+                                        '#d4af37',
+                                      marginLeft:
+                                        '4px',
+                                    }}
+                                  >
+                                    {' · ' +
+                                      s.tur}
+                                  </span>
+                                ) : (
+                                  ''
+                                )}
+                              </div>
 
-                                    Buradaki "s" yalnızca bu kutunun
-                                    Supabase kaydıdır.
-                                   ================================================== */}
+                              {/* ZOTERO + PDF */}
+
+                              <div
+                                style={{
+                                  display:
+                                    'flex',
+                                  gap: '8px',
+                                  alignItems:
+                                    'center',
+                                }}
+                              >
+                                {/* ZOTERO */}
 
                                 <button
                                   type="button"
@@ -1430,9 +1267,7 @@ export default function Kutuphane({ sources = [], error }) {
                                   Zotero ↗
                                 </button>
 
-                                {/* ==================================================
-                                    PDF
-                                   ================================================== */}
+                                {/* PDF */}
 
                                 {s.pdf_url && (
                                   <a
@@ -1470,6 +1305,7 @@ export default function Kutuphane({ sources = [], error }) {
                   </div>
 
                   {/* SONUÇ YOK */}
+
                   {!error &&
                     sources.length > 0 &&
                     filteredSources.length ===
@@ -1486,29 +1322,24 @@ export default function Kutuphane({ sources = [], error }) {
                       </p>
                     )}
 
-                  {/* ==================================================
-                      SAYFALAMA
-                     ================================================== */}
+                  {/* SAYFALAMA */}
 
                   {totalPages > 1 && (
                     <div
                       style={{
-                        display:
-                          'flex',
+                        display: 'flex',
                         justifyContent:
                           'center',
-                        alignItems:
-                          'center',
+                        alignItems: 'center',
                         gap: '8px',
-                        marginTop:
-                          '32px',
-                        paddingTop:
-                          '16px',
+                        marginTop: '32px',
+                        paddingTop: '16px',
                         borderTop:
                           '1px solid var(--line)',
                       }}
                     >
                       {/* ÖNCEKİ */}
+
                       <button
                         onClick={() =>
                           setCurrentPage(
@@ -1520,8 +1351,7 @@ export default function Kutuphane({ sources = [], error }) {
                           )
                         }
                         disabled={
-                          currentPage ===
-                          1
+                          currentPage === 1
                         }
                         style={{
                           padding:
@@ -1557,6 +1387,7 @@ export default function Kutuphane({ sources = [], error }) {
                       </button>
 
                       {/* SAYFA NUMARALARI */}
+
                       {Array.from(
                         {
                           length:
@@ -1610,6 +1441,7 @@ export default function Kutuphane({ sources = [], error }) {
                       )}
 
                       {/* SONRAKİ */}
+
                       <button
                         onClick={() =>
                           setCurrentPage(
@@ -1672,19 +1504,6 @@ export default function Kutuphane({ sources = [], error }) {
  * ============================================================
  * SUPABASE
  * ============================================================
- *
- * Kütüphaneye sources tablosundaki bütün alanları getiriyoruz.
- *
- * Her kartın:
- *
- * s.id
- *     ↓
- * sources tablosundaki ilgili kayıt
- *     ↓
- * createBibTeX(s)
- *     ↓
- * yalnızca o eser
- *
  */
 
 export async function getServerSideProps() {
