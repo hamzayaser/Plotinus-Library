@@ -131,6 +131,33 @@ export default function Kutuphane({ sources = [], error }) {
       .filter(Boolean);
   };
 
+  // Türkçe "tip" değerini Zotero/BibTeX entry tipine eşleştirir
+  const getZoteroEntryType = (tipRaw) => {
+    const tip = (tipRaw || '').toLowerCase();
+
+    if (tip.includes('makale')) return 'article';
+    if (tip.includes('bölümü') || tip.includes('bolumu')) {
+      return 'incollection';
+    }
+    if (
+      tip.includes('yüksek lisans') ||
+      tip.includes('yuksek lisans')
+    ) {
+      return 'mastersthesis';
+    }
+    if (tip.includes('doktora')) return 'phdthesis';
+    if (tip.includes('ansiklopedi')) return 'incollection';
+    if (
+      tip.includes('bildiri') ||
+      tip.includes('tebliğ') ||
+      tip.includes('teblig')
+    ) {
+      return 'inproceedings';
+    }
+
+    return 'book';
+  };
+
   /*
    * ============================================================
    * COinS
@@ -138,28 +165,33 @@ export default function Kutuphane({ sources = [], error }) {
    */
 
   const getCOinSFormat = (source) => {
-    const tip = (source.tip || 'book').toLowerCase();
-
-    const isArticle =
-      tip.includes('makale') ||
-      tip.includes('journal') ||
-      tip === 'journalarticle';
+    const entryType = getZoteroEntryType(source.tip);
 
     const params = new URLSearchParams();
 
     params.set('ctx_ver', 'Z39.88-2004');
 
-    if (isArticle) {
-      params.set(
-        'rft_val_fmt',
-        'info:ofi/fmt:kev:mtx:journal'
-      );
-    } else {
-      params.set(
-        'rft_val_fmt',
-        'info:ofi/fmt:kev:mtx:book'
-      );
-    }
+    // Zotero'nun tanıdığı OpenURL genre/format eşlemesi
+    const genreMap = {
+      article: 'article',
+      incollection: 'bookitem',
+      mastersthesis: 'thesis',
+      phdthesis: 'thesis',
+      inproceedings: 'proceeding',
+      book: 'book',
+    };
+
+    const fmtMap = {
+      article: 'info:ofi/fmt:kev:mtx:journal',
+      incollection: 'info:ofi/fmt:kev:mtx:book',
+      mastersthesis: 'info:ofi/fmt:kev:mtx:dissertation',
+      phdthesis: 'info:ofi/fmt:kev:mtx:dissertation',
+      inproceedings: 'info:ofi/fmt:kev:mtx:book',
+      book: 'info:ofi/fmt:kev:mtx:book',
+    };
+
+    params.set('rft_val_fmt', fmtMap[entryType]);
+    params.set('rft.genre', genreMap[entryType]);
 
     if (source.baslik) {
       params.set('rft.title', source.baslik);
@@ -169,7 +201,29 @@ export default function Kutuphane({ sources = [], error }) {
       params.set('rft.date', String(source.yil));
     }
 
-    if (source.yayinevi) {
+    // Dergi adı / kitap adı / ansiklopedi adı / bildiri kitabı
+    // -> hepsi kaynak_adi'nda
+    if (entryType === 'article' && source.kaynak_adi) {
+      params.set('rft.jtitle', source.kaynak_adi);
+    }
+
+    if (
+      (entryType === 'incollection' ||
+        entryType === 'inproceedings') &&
+      source.kaynak_adi
+    ) {
+      params.set('rft.btitle', source.kaynak_adi);
+    }
+
+    // Tez -> üniversite; diğerleri -> yayınevi
+    if (
+      entryType === 'mastersthesis' ||
+      entryType === 'phdthesis'
+    ) {
+      if (source.universite) {
+        params.set('rft.pub', source.universite);
+      }
+    } else if (source.yayinevi) {
       params.set('rft.publisher', source.yayinevi);
     }
 
@@ -241,6 +295,29 @@ export default function Kutuphane({ sources = [], error }) {
       }
     });
 
+    // Editör (Kitap Bölümü, Ansiklopedi, Bildiri)
+    const editors = parseNamesToCreators(
+      source.editor,
+      'editor'
+    );
+
+    editors.forEach((editor) => {
+      if (editor.name) {
+        params.append('rft.aucorp', editor.name);
+      } else {
+        const fullName = [
+          editor.firstName,
+          editor.lastName,
+        ]
+          .filter(Boolean)
+          .join(' ');
+
+        if (fullName) {
+          params.append('rft.aucorp', fullName);
+        }
+      }
+    });
+
     return params.toString();
   };
 
@@ -275,25 +352,14 @@ export default function Kutuphane({ sources = [], error }) {
         .join(' and ');
     };
 
-    const tip = (source.tip || 'book').toLowerCase();
-
-    const isArticle =
-      tip.includes('makale') ||
-      tip.includes('journal') ||
-      tip === 'journalarticle';
+    const entryType = getZoteroEntryType(source.tip);
 
     const citationKey = `source_${source.id}`;
-
-    const entryType = isArticle
-      ? 'article'
-      : 'book';
 
     let bibtex = `@${entryType}{${citationKey},\n`;
 
     if (source.baslik) {
-      bibtex += `  title = {${escapeBibTeX(
-        source.baslik
-      )}},\n`;
+      bibtex += `  title = {${escapeBibTeX(source.baslik)}},\n`;
     }
 
     if (source.yazar) {
@@ -303,25 +369,58 @@ export default function Kutuphane({ sources = [], error }) {
     }
 
     if (source.cevirmen) {
-      bibtex += `  editor = {${escapeBibTeX(
+      bibtex += `  translator = {${escapeBibTeX(
         getBibTeXAuthors(source.cevirmen)
       )}},\n`;
     }
 
+    // Editör: Kitap Bölümü / Ansiklopedi / Bildiri'de
+    // gerçek editör alanı
+    if (source.editor) {
+      bibtex += `  editor = {${escapeBibTeX(
+        getBibTeXAuthors(source.editor)
+      )}},\n`;
+    }
+
     if (source.yil) {
-      bibtex += `  year = {${escapeBibTeX(
-        source.yil
-      )}},\n`;
+      bibtex += `  year = {${escapeBibTeX(source.yil)}},\n`;
     }
 
-    if (source.yayinevi && !isArticle) {
+    // kaynak_adi -> tipe göre doğru BibTeX alanına yazılır
+    if (source.kaynak_adi) {
+      if (entryType === 'article') {
+        bibtex += `  journal = {${escapeBibTeX(
+          source.kaynak_adi
+        )}},\n`;
+      } else if (entryType === 'incollection') {
+        bibtex += `  booktitle = {${escapeBibTeX(
+          source.kaynak_adi
+        )}},\n`;
+      } else if (entryType === 'inproceedings') {
+        bibtex += `  booktitle = {${escapeBibTeX(
+          source.kaynak_adi
+        )}},\n`;
+      }
+    }
+
+    // Tez -> school; diğerleri -> publisher
+    if (
+      entryType === 'mastersthesis' ||
+      entryType === 'phdthesis'
+    ) {
+      if (source.universite) {
+        bibtex += `  school = {${escapeBibTeX(
+          source.universite
+        )}},\n`;
+      }
+
+      if (source.enstitu) {
+        bibtex += `  type = {${escapeBibTeX(
+          source.enstitu
+        )}},\n`;
+      }
+    } else if (source.yayinevi) {
       bibtex += `  publisher = {${escapeBibTeX(
-        source.yayinevi
-      )}},\n`;
-    }
-
-    if (source.yayinevi && isArticle) {
-      bibtex += `  journal = {${escapeBibTeX(
         source.yayinevi
       )}},\n`;
     }
