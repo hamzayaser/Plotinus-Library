@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Layout, { EmanationRings } from '../components/Layout';
 import Link from 'next/link';
-import { supabase } from '../lib/supabaseClient'; // Supabase istemci yolunuza göre kontrol edin
+import { supabase } from '../lib/supabaseClient';
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -19,7 +19,7 @@ export default function Home() {
     async function fetchSources() {
       try {
         const { data, error } = await supabase
-          .from('sources') // Veritabanı tablo adınız
+          .from('sources')
           .select('*');
         if (!error && data) {
           setAllSources(data);
@@ -60,7 +60,7 @@ export default function Home() {
       );
     });
 
-    setSearchResults(filtered.slice(0, 6)); // İlk 6 canlı sonucu göster
+    setSearchResults(filtered.slice(0, 6));
     setShowDropdown(true);
     setIsLoading(false);
   }, [searchQuery, allSources]);
@@ -87,18 +87,15 @@ export default function Home() {
 
   return (
     <Layout>
-      <section className="hero">
+      <section className="hero" style={{ position: 'relative', zIndex: 10 }}>
         <EmanationRings />
         <div className="eyebrow">Neoplatonizm · Ontoloji Araştırmaları</div>
         <h1>
           Bir'den <em>Tüm'e</em>,<br /> taşan ışığın izinde
         </h1>
-        <p className="lead">
-          Plotinos Kütüphanesi, başta Enneadlar olmak üzere, Plotinos düşüncesi üzerine hazırlanmış kitap, tez ve makalelerden müteşekkil kaynakçamıza erişim sağlayan bir portal sunmaktadır.
-        </p>
 
         {/* Canlı Arama Çubuğu */}
-        <div ref={searchRef} style={{ maxWidth: '600px', margin: '32px auto 0 auto', position: 'relative', zIndex: 10 }}>
+        <div ref={searchRef} style={{ maxWidth: '600px', margin: '32px auto 0 auto', position: 'relative', zIndex: 20 }}>
           <form 
             onSubmit={handleSearchSubmit}
             style={{ display: 'flex', gap: '8px' }}
@@ -138,7 +135,6 @@ export default function Home() {
             </button>
           </form>
 
-          {/* Açılır Canlı Sonuç Penceresi */}
           {showDropdown && searchQuery.trim() && (
             <div style={{
               position: 'absolute',
@@ -149,11 +145,11 @@ export default function Home() {
               backgroundColor: '#161513',
               border: '1px solid rgba(212, 175, 55, 0.3)',
               borderRadius: '8px',
-              boxShadow: '0 12px 32px rgba(0,0,0,0.8)',
+              boxShadow: '0 12px 32px rgba(0,0,0,0.95)',
               maxHeight: '360px',
               overflowY: 'auto',
               textAlign: 'left',
-              zIndex: 20
+              zIndex: 999
             }}>
               {searchResults.length > 0 ? (
                 <div>
@@ -208,7 +204,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section" style={{ position: 'relative', zIndex: 1 }}>
         <div className="container">
           {/* Kartlar */}
           <div className="grid grid-2">
@@ -216,15 +212,14 @@ export default function Home() {
               <span className="tag">Kaynaklar</span>
               <h3>Kütüphane</h3>
               <p className="desc">
-                Enneadlar başta olmak üzere temel metinler, kategori ve yazara
-                göre düzenlenmiş kaynak listesi.
+                Plotinos Kütüphanesi, başta Enneadlar olmak üzere, Plotinos düşüncesi üzerine hazırlanmış kitap, tez ve makalelerden müteşekkil kaynakçamıza erişim sağlayan bir portal sunmaktadır.
               </p>
             </Link>
             <Link href="/via-plotin" className="card">
               <span className="tag">Deneme</span>
               <h3>Via Plotin</h3>
               <p className="desc">
-                Plotinos üzerine araştırma notları ve uzun soluklu denemeler.
+                Plotinos üzerine notlar, alıntılar ve bireysel yazılar.
               </p>
             </Link>
             <Link href="/iletisim" className="card">
