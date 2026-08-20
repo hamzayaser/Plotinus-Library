@@ -15,6 +15,68 @@ const TAXONOMY = {
   'Enneadlar': ['Ana Eser', 'Çeviriler'],
 };
 
+// ---------------------------------------------------------------
+// KAYNAK TİPLERİ VE TİPE GÖRE GÖRÜNECEK ALANLAR
+// ---------------------------------------------------------------
+const TIP_OPTIONS = [
+  'Kitap',
+  'Kitap Bölümü',
+  'Makale',
+  'Yüksek Lisans Tezi',
+  'Doktora Tezi',
+  'Ansiklopedi Maddesi',
+  'Bildiri/Tebliğ',
+];
+
+// Her tip için: hangi alanlar görünsün + o alanın bu tipteki etiketi/placeholder'ı
+const TIP_FIELD_CONFIG = {
+  'Kitap': {
+    cevirmen: true,
+    yayinevi: { label: 'Yayınevi', placeholder: 'Örn: İş Bankası Kültür Yayınları' },
+    yayin_yeri: { label: 'Yayın Yeri', placeholder: 'Örn: İstanbul' },
+    cilt: { label: 'Cilt' },
+  },
+  'Kitap Bölümü': {
+    cevirmen: true,
+    editor: { label: 'Editör' },
+    kaynak_adi: { label: 'Kitap Adı', placeholder: 'Bölümün içinde yer aldığı editörlü eser' },
+    yayinevi: { label: 'Yayınevi' },
+    yayin_yeri: { label: 'Yayın Yeri', placeholder: 'Örn: İstanbul' },
+    sayfa_araligi: { label: 'Sayfa Aralığı', placeholder: 'Örn: 55-78' },
+  },
+  'Makale': {
+    kaynak_adi: { label: 'Dergi Adı', placeholder: 'Örn: Kaygı Dergisi' },
+    cilt: { label: 'Cilt' },
+    sayi: { label: 'Sayı' },
+    sayfa_araligi: { label: 'Sayfa Aralığı', placeholder: 'Örn: 55-78' },
+  },
+  'Yüksek Lisans Tezi': {
+    universite: { label: 'Üniversite' },
+    enstitu: { label: 'Enstitü / Anabilim Dalı' },
+    yayin_yeri: { label: 'Şehir', placeholder: 'Örn: Ankara' },
+  },
+  'Doktora Tezi': {
+    universite: { label: 'Üniversite' },
+    enstitu: { label: 'Enstitü / Anabilim Dalı' },
+    yayin_yeri: { label: 'Şehir', placeholder: 'Örn: Ankara' },
+  },
+  'Ansiklopedi Maddesi': {
+    editor: { label: 'Editör' },
+    kaynak_adi: { label: 'Ansiklopedi Adı', placeholder: 'Örn: TDV İslâm Ansiklopedisi' },
+    yayinevi: { label: 'Yayınevi' },
+    yayin_yeri: { label: 'Yayın Yeri' },
+    cilt: { label: 'Cilt' },
+    sayfa_araligi: { label: 'Sayfa Aralığı' },
+  },
+  'Bildiri/Tebliğ': {
+    editor: { label: 'Editör (varsa)' },
+    kaynak_adi: { label: 'Bildiri Kitabı / Kongre Adı' },
+    yayinevi: { label: 'Yayınevi' },
+    yayin_yeri: { label: 'Yayın Yeri' },
+    sayfa_araligi: { label: 'Sayfa Aralığı' },
+  },
+};
+
 const EMPTY_SOURCE = {
   baslik: '',
   kategori: [],
@@ -26,11 +88,13 @@ const EMPTY_SOURCE = {
   dil: '',
   yayinevi: '',
   yayin_yeri: '',
-  isbn: '',
+  editor: '',
+  kaynak_adi: '',
+  enstitu: '',
+  universite: '',
   cilt: '',
   sayi: '',
   sayfa_araligi: '',
-  aciklama: '',
   pdf_url: '',
 };
 
@@ -258,6 +322,30 @@ function SourceFormFields({ form, setForm, handleSubmit, status, editingId, onCa
     });
   };
 
+  // Seçilen tipe göre hangi alanların görüneceğini belirle
+  const cfg = TIP_FIELD_CONFIG[form.tip] || {};
+
+  function handleTipChange(newTip) {
+    // Tip değişince, yeni tipte görünmeyecek alanları temizle (eski verinin
+    // yanlışlıkla başka bir kayıt tipine sızmasını önlemek için)
+    const newCfg = TIP_FIELD_CONFIG[newTip] || {};
+    const clearIfHidden = (key) => (newCfg[key] ? form[key] : '');
+    setForm({
+      ...form,
+      tip: newTip,
+      cevirmen: newCfg.cevirmen ? form.cevirmen : '',
+      yayinevi: clearIfHidden('yayinevi'),
+      yayin_yeri: clearIfHidden('yayin_yeri'),
+      editor: clearIfHidden('editor'),
+      kaynak_adi: clearIfHidden('kaynak_adi'),
+      enstitu: clearIfHidden('enstitu'),
+      universite: clearIfHidden('universite'),
+      cilt: clearIfHidden('cilt'),
+      sayi: clearIfHidden('sayi'),
+      sayfa_araligi: clearIfHidden('sayfa_araligi'),
+    });
+  }
+
   return (
     <form onSubmit={handleSubmit}>
       <div className="field">
@@ -270,17 +358,18 @@ function SourceFormFields({ form, setForm, handleSubmit, status, editingId, onCa
           <label>Yazar</label>
           <input value={form.yazar} onChange={(e) => setForm({ ...form, yazar: e.target.value })} />
         </div>
-        <div className="field" style={{ flex: '1 1 160px', margin: 0 }}>
-          <label>Çevirmen</label>
-          <input value={form.cevirmen} onChange={(e) => setForm({ ...form, cevirmen: e.target.value })} />
-        </div>
         <div className="field" style={{ flex: '0 1 90px', margin: 0 }}>
           <label>Yıl</label>
           <input value={form.yil} onChange={(e) => setForm({ ...form, yil: e.target.value })} />
         </div>
-        <div className="field" style={{ flex: '1 1 140px', margin: 0 }}>
-          <label>Tip</label>
-          <input value={form.tip} onChange={(e) => setForm({ ...form, tip: e.target.value })} placeholder="Makale, Kitap..." />
+        <div className="field" style={{ flex: '1 1 180px', margin: 0 }}>
+          <label>Eser Tipi</label>
+          <select value={form.tip} onChange={(e) => handleTipChange(e.target.value)} required>
+            <option value="">-- Seç --</option>
+            {TIP_OPTIONS.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
         </div>
         <div className="field" style={{ flex: '0 1 130px', margin: 0 }}>
           <label>Dil</label>
@@ -294,38 +383,94 @@ function SourceFormFields({ form, setForm, handleSubmit, status, editingId, onCa
             <option value="Yunanca">Yunanca</option>
           </select>
         </div>
+        {cfg.cevirmen && (
+          <div className="field" style={{ flex: '1 1 160px', margin: 0 }}>
+            <label>Çevirmen</label>
+            <input value={form.cevirmen} onChange={(e) => setForm({ ...form, cevirmen: e.target.value })} />
+          </div>
+        )}
       </div>
 
-      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: 12 }}>
-        <div className="field" style={{ flex: '2 1 220px', margin: 0 }}>
-          <label>Yayınevi / Dergi Adı</label>
-          <input
-            value={form.yayinevi}
-            onChange={(e) => setForm({ ...form, yayinevi: e.target.value })}
-            placeholder="Örn: İş Bankası Kültür Yayınları — veya — Kaygı Dergisi"
-          />
+      {!form.tip && (
+        <p className="status" style={{ marginTop: 12, opacity: 0.7 }}>
+          Devam etmek için önce eser tipini seçin — ilgili alanlar burada açılacak.
+        </p>
+      )}
+
+      {form.tip && (
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: 12 }}>
+          {cfg.editor && (
+            <div className="field" style={{ flex: '1 1 180px', margin: 0 }}>
+              <label>{cfg.editor.label}</label>
+              <input value={form.editor} onChange={(e) => setForm({ ...form, editor: e.target.value })} />
+            </div>
+          )}
+          {cfg.kaynak_adi && (
+            <div className="field" style={{ flex: '2 1 220px', margin: 0 }}>
+              <label>{cfg.kaynak_adi.label}</label>
+              <input
+                value={form.kaynak_adi}
+                onChange={(e) => setForm({ ...form, kaynak_adi: e.target.value })}
+                placeholder={cfg.kaynak_adi.placeholder}
+              />
+            </div>
+          )}
+          {cfg.universite && (
+            <div className="field" style={{ flex: '2 1 220px', margin: 0 }}>
+              <label>{cfg.universite.label}</label>
+              <input value={form.universite} onChange={(e) => setForm({ ...form, universite: e.target.value })} />
+            </div>
+          )}
+          {cfg.enstitu && (
+            <div className="field" style={{ flex: '2 1 220px', margin: 0 }}>
+              <label>{cfg.enstitu.label}</label>
+              <input value={form.enstitu} onChange={(e) => setForm({ ...form, enstitu: e.target.value })} />
+            </div>
+          )}
+          {cfg.yayinevi && (
+            <div className="field" style={{ flex: '2 1 220px', margin: 0 }}>
+              <label>{cfg.yayinevi.label}</label>
+              <input
+                value={form.yayinevi}
+                onChange={(e) => setForm({ ...form, yayinevi: e.target.value })}
+                placeholder={cfg.yayinevi.placeholder}
+              />
+            </div>
+          )}
+          {cfg.yayin_yeri && (
+            <div className="field" style={{ flex: '1 1 140px', margin: 0 }}>
+              <label>{cfg.yayin_yeri.label}</label>
+              <input
+                value={form.yayin_yeri}
+                onChange={(e) => setForm({ ...form, yayin_yeri: e.target.value })}
+                placeholder={cfg.yayin_yeri.placeholder}
+              />
+            </div>
+          )}
+          {cfg.cilt && (
+            <div className="field" style={{ flex: '0 1 90px', margin: 0 }}>
+              <label>{cfg.cilt.label}</label>
+              <input value={form.cilt} onChange={(e) => setForm({ ...form, cilt: e.target.value })} />
+            </div>
+          )}
+          {cfg.sayi && (
+            <div className="field" style={{ flex: '0 1 90px', margin: 0 }}>
+              <label>{cfg.sayi.label}</label>
+              <input value={form.sayi} onChange={(e) => setForm({ ...form, sayi: e.target.value })} />
+            </div>
+          )}
+          {cfg.sayfa_araligi && (
+            <div className="field" style={{ flex: '0 1 110px', margin: 0 }}>
+              <label>{cfg.sayfa_araligi.label}</label>
+              <input
+                value={form.sayfa_araligi}
+                onChange={(e) => setForm({ ...form, sayfa_araligi: e.target.value })}
+                placeholder={cfg.sayfa_araligi.placeholder}
+              />
+            </div>
+          )}
         </div>
-        <div className="field" style={{ flex: '1 1 140px', margin: 0 }}>
-          <label>Yayın Yeri</label>
-          <input value={form.yayin_yeri} onChange={(e) => setForm({ ...form, yayin_yeri: e.target.value })} placeholder="Örn: İstanbul" />
-        </div>
-        <div className="field" style={{ flex: '0 1 90px', margin: 0 }}>
-          <label>Cilt</label>
-          <input value={form.cilt} onChange={(e) => setForm({ ...form, cilt: e.target.value })} />
-        </div>
-        <div className="field" style={{ flex: '0 1 90px', margin: 0 }}>
-          <label>Sayı</label>
-          <input value={form.sayi} onChange={(e) => setForm({ ...form, sayi: e.target.value })} />
-        </div>
-        <div className="field" style={{ flex: '0 1 110px', margin: 0 }}>
-          <label>Sayfa Aralığı</label>
-          <input value={form.sayfa_araligi} onChange={(e) => setForm({ ...form, sayfa_araligi: e.target.value })} placeholder="Örn: 55-78" />
-        </div>
-        <div className="field" style={{ flex: '0 1 150px', margin: 0 }}>
-          <label>ISBN</label>
-          <input value={form.isbn} onChange={(e) => setForm({ ...form, isbn: e.target.value })} />
-        </div>
-      </div>
+      )}
 
       <div style={{ display: 'flex', gap: '10px', marginTop: 12, flexWrap: 'wrap' }}>
         <div className="field" style={{ flex: '1 1 220px', margin: 0 }}>
@@ -351,11 +496,6 @@ function SourceFormFields({ form, setForm, handleSubmit, status, editingId, onCa
       <div className="field" style={{ marginTop: 12 }}>
         <label>PDF Bağlantısı (URL)</label>
         <input type="url" placeholder="https://..." value={form.pdf_url} onChange={(e) => setForm({ ...form, pdf_url: e.target.value })} />
-      </div>
-
-      <div className="field">
-        <label>Açıklama</label>
-        <textarea value={form.aciklama} onChange={(e) => setForm({ ...form, aciklama: e.target.value })} />
       </div>
 
       <div style={{ marginTop: 16 }}>
@@ -465,11 +605,13 @@ function SourcesAdmin({ password }) {
       dil: s.dil || '',
       yayinevi: s.yayinevi || '',
       yayin_yeri: s.yayin_yeri || '',
-      isbn: s.isbn || '',
+      editor: s.editor || '',
+      kaynak_adi: s.kaynak_adi || '',
+      enstitu: s.enstitu || '',
+      universite: s.universite || '',
       cilt: s.cilt || '',
       sayi: s.sayi || '',
       sayfa_araligi: s.sayfa_araligi || '',
-      aciklama: s.aciklama || '',
       pdf_url: s.pdf_url || '',
     });
     setIsModalOpen(true);
@@ -507,7 +649,7 @@ function SourcesAdmin({ password }) {
             <div>
               <strong>{s.baslik}</strong>
               <div className="meta">
-                {s.yazar} {s.cevirmen ? `(Çev: ${s.cevirmen})` : ''} {s.yil ? `· ${s.yil}` : ''} {s.dil ? `· ${s.dil}` : ''} ·
+                {s.yazar} {s.cevirmen ? `(Çev: ${s.cevirmen})` : ''} {s.yil ? `· ${s.yil}` : ''} {s.tip ? `· ${s.tip}` : ''} {s.dil ? `· ${s.dil}` : ''} ·
                 <span style={{ color: 'var(--color-primary, #c5a059)', marginLeft: 4 }}>
                   [{s.kategori} {s.alt_kategori ? `> ${s.alt_kategori}` : ''}]
                 </span>
