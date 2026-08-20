@@ -734,6 +734,7 @@ export default function Kutuphane({ sources = [], error }) {
           {!error && sources.length > 0 && (
             <>
               {/* ARAMA */}
+
               <div
                 style={{
                   marginBottom: '24px',
@@ -785,9 +786,11 @@ export default function Kutuphane({ sources = [], error }) {
                   <div
                     style={{
                       display: 'flex',
-                      flexDirection: 'column',
+                      flexDirection:
+                        'column',
                       gap: '4px',
-                      marginBottom: '24px',
+                      marginBottom:
+                        '24px',
                     }}
                   >
                     {categoriesWithCounts.map(
@@ -801,8 +804,10 @@ export default function Kutuphane({ sources = [], error }) {
                             }
                             style={{
                               width: '100%',
-                              textAlign: 'left',
-                              padding: '6px 12px',
+                              textAlign:
+                                'left',
+                              padding:
+                                '6px 12px',
                               border:
                                 '1px solid ' +
                                 (selectedCategory ===
@@ -819,10 +824,12 @@ export default function Kutuphane({ sources = [], error }) {
                                 name
                                   ? 'var(--gold-bright)'
                                   : 'var(--parchment)',
-                              cursor: 'pointer',
+                              cursor:
+                                'pointer',
                               fontFamily:
                                 'var(--font-mono)',
-                              fontSize: '0.72rem',
+                              fontSize:
+                                '0.72rem',
                               transition:
                                 'all 0.2s ease',
                             }}
@@ -844,12 +851,17 @@ export default function Kutuphane({ sources = [], error }) {
                               0 && (
                               <div
                                 style={{
-                                  display: 'flex',
-                                  flexDirection: 'column',
+                                  display:
+                                    'flex',
+                                  flexDirection:
+                                    'column',
                                   gap: '3px',
-                                  marginTop: '4px',
-                                  marginBottom: '4px',
-                                  paddingLeft: '10px',
+                                  marginTop:
+                                    '4px',
+                                  marginBottom:
+                                    '4px',
+                                  paddingLeft:
+                                    '10px',
                                   borderLeft:
                                     '1px solid var(--gold)',
                                 }}
@@ -866,10 +878,12 @@ export default function Kutuphane({ sources = [], error }) {
                                         )
                                       }
                                       style={{
-                                        textAlign: 'left',
+                                        textAlign:
+                                          'left',
                                         padding:
                                           '3px 8px',
-                                        border: 'none',
+                                        border:
+                                          'none',
                                         backgroundColor:
                                           selectedSubCategory ===
                                           sub.name
@@ -914,16 +928,19 @@ export default function Kutuphane({ sources = [], error }) {
                     style={{
                       borderTop:
                         '1px solid var(--line)',
-                      paddingTop: '14px',
+                      paddingTop:
+                        '14px',
                     }}
                   >
                     <div
                       style={{
                         fontFamily:
                           'var(--font-mono)',
-                        fontSize: '0.68rem',
+                        fontSize:
+                          '0.68rem',
                         opacity: 0.6,
-                        marginBottom: '8px',
+                        marginBottom:
+                          '8px',
                       }}
                     >
                       FİLTRELER
@@ -933,14 +950,18 @@ export default function Kutuphane({ sources = [], error }) {
 
                     <div
                       style={{
-                        marginBottom: '12px',
+                        marginBottom:
+                          '12px',
                       }}
                     >
                       <label
                         style={{
-                          fontSize: '0.7rem',
-                          display: 'block',
-                          marginBottom: '4px',
+                          fontSize:
+                            '0.7rem',
+                          display:
+                            'block',
+                          marginBottom:
+                            '4px',
                         }}
                       >
                         Yıl Aralığı
@@ -948,7 +969,8 @@ export default function Kutuphane({ sources = [], error }) {
 
                       <div
                         style={{
-                          display: 'flex',
+                          display:
+                            'flex',
                           gap: '4px',
                         }}
                       >
@@ -960,29 +982,39 @@ export default function Kutuphane({ sources = [], error }) {
                           }
                           onChange={(e) =>
                             setYilBaslangic(
-                              e.target.value
+                              e.target
+                                .value
                             )
                           }
                           style={{
-                            width: '50%',
-                            fontSize: '0.7rem',
-                            padding: '4px 6px',
+                            width:
+                              '50%',
+                            fontSize:
+                              '0.7rem',
+                            padding:
+                              '4px 6px',
                           }}
                         />
 
                         <input
                           type="number"
                           placeholder="Bitiş"
-                          value={yilBitis}
+                          value={
+                            yilBitis
+                          }
                           onChange={(e) =>
                             setYilBitis(
-                              e.target.value
+                              e.target
+                                .value
                             )
                           }
                           style={{
-                            width: '50%',
-                            fontSize: '0.7rem',
-                            padding: '4px 6px',
+                            width:
+                              '50%',
+                            fontSize:
+                              '0.7rem',
+                            padding:
+                              '4px 6px',
                           }}
                         />
                       </div>
@@ -993,25 +1025,34 @@ export default function Kutuphane({ sources = [], error }) {
                     <div>
                       <label
                         style={{
-                          fontSize: '0.7rem',
-                          display: 'block',
-                          marginBottom: '4px',
+                          fontSize:
+                            '0.7rem',
+                          display:
+                            'block',
+                          marginBottom:
+                            '4px',
                         }}
                       >
                         Dil
                       </label>
 
                       <select
-                        value={selectedDil}
+                        value={
+                          selectedDil
+                        }
                         onChange={(e) =>
                           setSelectedDil(
-                            e.target.value
+                            e.target
+                              .value
                           )
                         }
                         style={{
-                          width: '100%',
-                          fontSize: '0.7rem',
-                          padding: '4px 6px',
+                          width:
+                            '100%',
+                          fontSize:
+                            '0.7rem',
+                          padding:
+                            '4px 6px',
                         }}
                       >
                         {dilOptions.map(
@@ -1039,7 +1080,8 @@ export default function Kutuphane({ sources = [], error }) {
                 >
                   <div
                     style={{
-                      display: 'grid',
+                      display:
+                        'grid',
                       gridTemplateColumns:
                         isMobile
                           ? '1fr'
@@ -1069,12 +1111,14 @@ export default function Kutuphane({ sources = [], error }) {
                             className="card"
                             key={s.id}
                             style={{
-                              display: 'flex',
+                              display:
+                                'flex',
                               flexDirection:
                                 'column',
                               justifyContent:
                                 'space-between',
-                              padding: '16px',
+                              padding:
+                                '16px',
                               minHeight:
                                 '150px',
                             }}
@@ -1177,8 +1221,10 @@ export default function Kutuphane({ sources = [], error }) {
 
                             <div
                               style={{
-                                marginTop: '12px',
-                                display: 'flex',
+                                marginTop:
+                                  '12px',
+                                display:
+                                  'flex',
                                 justifyContent:
                                   'space-between',
                                 alignItems:
@@ -1186,7 +1232,7 @@ export default function Kutuphane({ sources = [], error }) {
                                 gap: '8px',
                               }}
                             >
-                              {/* YAZAR + YIL + ESER TİPİ */}
+                              {/* YAZAR + YIL + TİP */}
 
                               <div
                                 className="meta"
@@ -1203,7 +1249,7 @@ export default function Kutuphane({ sources = [], error }) {
                                     s.yil
                                   : ''}
 
-                                {s.tur ? (
+                                {s.tip ? (
                                   <span
                                     style={{
                                       color:
@@ -1213,11 +1259,9 @@ export default function Kutuphane({ sources = [], error }) {
                                     }}
                                   >
                                     {' · ' +
-                                      s.tur}
+                                      s.tip}
                                   </span>
-                                ) : (
-                                  ''
-                                )}
+                                ) : ''}
                               </div>
 
                               {/* ZOTERO + PDF */}
@@ -1327,13 +1371,17 @@ export default function Kutuphane({ sources = [], error }) {
                   {totalPages > 1 && (
                     <div
                       style={{
-                        display: 'flex',
+                        display:
+                          'flex',
                         justifyContent:
                           'center',
-                        alignItems: 'center',
+                        alignItems:
+                          'center',
                         gap: '8px',
-                        marginTop: '32px',
-                        paddingTop: '16px',
+                        marginTop:
+                          '32px',
+                        paddingTop:
+                          '16px',
                         borderTop:
                           '1px solid var(--line)',
                       }}
@@ -1351,7 +1399,8 @@ export default function Kutuphane({ sources = [], error }) {
                           )
                         }
                         disabled={
-                          currentPage === 1
+                          currentPage ===
+                          1
                         }
                         style={{
                           padding:
