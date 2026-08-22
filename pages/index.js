@@ -1,29 +1,120 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
-import Layout, { EmanationRings } from '../components/Layout';
+import Layout from '../components/Layout';
 import Link from 'next/link';
 import { supabase } from '../lib/supabaseClient';
 
-export default function Home({ siteSettings }) {
+// Basit "say-yukarı" animasyonu — sahte değil, gerçek veriden gelen
+// sayılara doğru sayarak ilerler.
+function useCountUp(target, duration = 1100) {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    let start = null;
+    let raf;
+    const step = (ts) => {
+      if (start === null) start = ts;
+      const progress = Math.min((ts - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.round(eased * target));
+      if (progress < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  return value;
+}
+
+function StatCard({ label, sub, value, max, desc }) {
+  const count = useCountUp(value);
+  const pct = max ? Math.min(100, Math.round((value / max) * 100)) : 100;
+
+  return (
+    <div className="home-stat-card">
+      <div className="home-stat-top">
+        <span className="home-stat-label">{label}</span>
+        <span className="home-stat-sub">{sub}</span>
+      </div>
+
+      <div className="home-stat-number">{count}</div>
+
+      <div className="home-stat-desc">{desc}</div>
+
+      <div className="home-bar-track">
+        <div
+          className="home-bar-fill"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+export default function Home({ siteSettings, stats }) {
   const heroImageUrl = siteSettings?.hero_image_url || '';
   const heroImageCaption = siteSettings?.hero_image_caption || '';
 
   return (
     <Layout>
-      <section className="hero" style={{ position: 'relative', zIndex: 10 }}>
-        <EmanationRings />
+      <section className="home-hero">
+        <div className="home-glow" aria-hidden="true" />
 
-        <div className="eyebrow">
-          Neoplatonizm · Ontoloji Araştırmaları
+        <div className="home-badge">
+          <span className="dot" />
+          Plotinos Kütüphanesi
         </div>
 
         <h1>
           Bir'den <em>Tüm'e</em>,<br /> taşan ışığın izinde
         </h1>
+
+        <p className="home-lead">
+          Neoplatonizm ve Plotinos düşüncesi üzerine, sürekli genişleyen
+          bir kaynakça: kitaplar, tezler, makaleler ve özgün yazılar
+          tek bir kütüphanede.
+        </p>
+
+        <div className="home-cta-row">
+          <Link href="/kutuphane" className="btn">
+            Kütüphaneyi Keşfet
+          </Link>
+
+          <Link href="/via-plotin" className="btn secondary">
+            Via Plotin'i Oku
+          </Link>
+        </div>
       </section>
 
+      {/* CANLI KÜTÜPHANE PANELİ — gerçek Supabase verisinden */}
+      <div className="home-stats-wrap">
+        <div className="home-stats">
+          <StatCard
+            label="Kaynaklar"
+            sub="Toplam"
+            value={stats.sourceCount}
+            max={Math.max(stats.sourceCount, 50)}
+            desc="Kitap, tez ve makale"
+          />
+
+          <StatCard
+            label="Kategoriler"
+            sub="Kapsam"
+            value={stats.categoryCount}
+            max={11}
+            desc="Ontoloji'den Mistisizm'e"
+          />
+
+          <StatCard
+            label="Via Plotin"
+            sub="Yazı"
+            value={stats.postCount}
+            max={Math.max(stats.postCount, 20)}
+            desc="Araştırma notları"
+          />
+        </div>
+      </div>
+
       {/* FOTO ŞERİDİ
-          Görsel eklenmişse gösterilir.
+          Görsel varsa gösterilir.
           Görsel yoksa şerit tamamen kaldırılır ve boşluk bırakmaz. */}
       {heroImageUrl && (
         <div className="photo-strip">
@@ -42,8 +133,12 @@ export default function Home({ siteSettings }) {
         </div>
       )}
 
-      <section className="section" style={{ position: 'relative', zIndex: 1 }}>
+      <section
+        className="section"
+        style={{ position: 'relative', zIndex: 1 }}
+      >
         <div className="container">
+
           {/* Kartlar */}
           <div className="grid grid-2">
             <Link href="/kutuphane" className="card">
@@ -52,7 +147,10 @@ export default function Home({ siteSettings }) {
               <h3>Kütüphane</h3>
 
               <p className="desc">
-                Plotinos Kütüphanesi, başta Enneadlar olmak üzere, Plotinos düşüncesi üzerine hazırlanmış kitap, tez ve makalelerden müteşekkil kaynakçamıza erişim sağlayan bir portal sunmaktadır.
+                Plotinos Kütüphanesi, başta Enneadlar olmak üzere,
+                Plotinos düşüncesi üzerine hazırlanmış kitap, tez ve
+                makalelerden müteşekkil kaynakçamıza erişim sağlayan
+                bir portal sunmaktadır.
               </p>
             </Link>
 
@@ -110,7 +208,8 @@ export default function Home({ siteSettings }) {
                 textAlign: 'center',
               }}
             >
-              Kütüphanedeki kaynakları tek tıkla Zotero'ya nasıl aktarabileceğinizi inceleyebilirsiniz.
+              Kütüphanedeki kaynakları tek tıkla Zotero'ya nasıl
+              aktarabileceğinizi inceleyebilirsiniz.
             </p>
 
             <div
@@ -128,7 +227,10 @@ export default function Home({ siteSettings }) {
                 controlsList="nodownload"
                 onContextMenu={(e) => e.preventDefault()}
                 preload="metadata"
-                style={{ width: '100%', display: 'block' }}
+                style={{
+                  width: '100%',
+                  display: 'block',
+                }}
               >
                 <source
                   src="/zotero-rehber.mp4"
@@ -146,15 +248,32 @@ export default function Home({ siteSettings }) {
 }
 
 export async function getServerSideProps() {
-  const { data } = await supabase
+  const { data: siteSettings } = await supabase
     .from('site_settings')
     .select('*')
     .eq('id', 1)
     .maybeSingle();
 
+  const { count: sourceCount } = await supabase
+    .from('sources')
+    .select('*', { count: 'exact', head: true });
+
+  const { count: postCount } = await supabase
+    .from('via_plotin')
+    .select('*', { count: 'exact', head: true });
+
+  // kutuphane.js'teki CATEGORY_SUBCATEGORY_MAP ile aynı 11 ana kategori sabit;
+  // burada ekstra bir sorguya gerek yok, panel doluluk oranını göstermek için kullanılıyor.
+  const categoryCount = 11;
+
   return {
     props: {
-      siteSettings: data || null,
+      siteSettings: siteSettings || null,
+      stats: {
+        sourceCount: sourceCount || 0,
+        postCount: postCount || 0,
+        categoryCount,
+      },
     },
   };
 }
