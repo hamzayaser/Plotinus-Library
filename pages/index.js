@@ -1,281 +1,436 @@
+```jsx
 import { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import Link from 'next/link';
 import { supabase } from '../lib/supabaseClient';
 
-function EmanationScene() {
-  const [scrollProgress, setScrollProgress] = useState(0);
-
-  useEffect(() => {
-    let ticking = false;
-
-    const updateScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          const section = document.querySelector('.emanation-section');
-
-          if (section) {
-            const rect = section.getBoundingClientRect();
-            const viewport = window.innerHeight;
-
-            const total = section.offsetHeight - viewport;
-
-            /*
-             * Doğrudan scroll değerini kullanıyoruz.
-             *
-             * Burada easing veya transition yok.
-             * Böylece halka scroll hareketini gecikmeden
-             * takip ediyor ve hareket ağırlaşmıyor.
-             */
-            const progress =
-              total > 0
-                ? Math.min(1, Math.max(0, -rect.top / total))
-                : 0;
-
-            setScrollProgress(progress);
-          }
-
-          ticking = false;
-        });
-
-        ticking = true;
-      }
-    };
-
-    window.addEventListener('scroll', updateScroll, {
-      passive: true,
-    });
-
-    updateScroll();
-
-    return () => {
-      window.removeEventListener('scroll', updateScroll);
-    };
-  }, []);
-
+function EmanationScene({ scrollProgress }) {
   const p = scrollProgress;
 
   return (
-    <section className="emanation-section">
-      <div className="emanation-sticky">
+    <div className="emanation-stage" aria-hidden="true">
 
-        {/* =================================================
-            ARKA PLAN HALKALARI
-            ================================================= */}
+      {/* =====================================================
+          MERKEZDEN DIŞARI YAYILAN IŞIK DALGALARI
+          ===================================================== */}
 
-        <div
-          className="emanation-orbit orbit-one"
-          style={{
-            transform: `
-              translate3d(
-                ${p * -55}px,
-                ${p * 95}px,
-                0
-              )
-              scale(${1 + p * 0.10})
-              rotate(${p * 15}deg)
-            `,
-          }}
-        />
+      <div
+        className="emanation-pulse emanation-pulse-one"
+        style={{
+          transform: `
+            translate(-50%, -50%)
+            scale(${0.72 + p * 0.12})
+          `,
+        }}
+      />
 
-        <div
-          className="emanation-orbit orbit-two"
-          style={{
-            transform: `
-              translate3d(
-                ${p * 65}px,
-                ${p * 55}px,
-                0
-              )
-              scale(${1 + p * 0.16})
-              rotate(${p * -20}deg)
-            `,
-          }}
-        />
+      <div
+        className="emanation-pulse emanation-pulse-two"
+        style={{
+          transform: `
+            translate(-50%, -50%)
+            scale(${0.58 + p * 0.16})
+          `,
+        }}
+      />
 
-        <div
-          className="emanation-orbit orbit-three"
-          style={{
-            transform: `
-              translate3d(
-                ${p * -35}px,
-                ${p * 125}px,
-                0
-              )
-              scale(${1 + p * 0.24})
-              rotate(${p * 10}deg)
-            `,
-          }}
-        />
+      <div
+        className="emanation-pulse emanation-pulse-three"
+        style={{
+          transform: `
+            translate(-50%, -50%)
+            scale(${0.42 + p * 0.20})
+          `,
+        }}
+      />
 
-        {/* =================================================
-            MERKEZ
-            ================================================= */}
+      {/* =====================================================
+          ANA HALKALAR
 
-        <div
-          className="emanation-core"
-          style={{
-            transform: `
-              translate3d(
-                0,
-                ${p * 105}px,
-                0
-              )
-              scale(${1 + p * 0.22})
-            `,
-          }}
-        >
-          <span>Τὸ Ἕν</span>
-        </div>
+          Bir → Nous → Psyukhe → Kozmos
 
-        {/* =================================================
-            IŞIK
-            ================================================= */}
+          Her halka bağımsız nefes alıyor.
+          Scroll ayrıca ölçek ve konumu etkiliyor.
+          ===================================================== */}
 
-        <div
-          className="emanation-glow"
-          style={{
-            transform: `
-              translate3d(
-                0,
-                ${p * 95}px,
-                0
-              )
-              scale(${1 + p * 0.35})
-            `,
-            opacity: 0.38 - p * 0.12,
-          }}
-        />
+      <div
+        className="emanation-ring emanation-ring-core"
+        style={{
+          transform: `
+            translate(-50%, -50%)
+            scale(${1 + p * 0.05})
+          `,
+        }}
+      />
 
-        {/* =================================================
-            GREKÇE KAVRAMLAR
-            ================================================= */}
+      <div
+        className="emanation-ring emanation-ring-nous"
+        style={{
+          transform: `
+            translate(-50%, -50%)
+            scale(${1 + p * 0.10})
+            rotate(${p * 8}deg)
+          `,
+        }}
+      />
 
-        <div className="emanation-labels">
+      <div
+        className="emanation-ring emanation-ring-psyche"
+        style={{
+          transform: `
+            translate(-50%, -50%)
+            scale(${1 + p * 0.16})
+            rotate(${p * -10}deg)
+          `,
+        }}
+      />
 
-          <span
-            style={{
-              transform: `translateY(${p * 40}px)`,
-              opacity: 0.72 + p * 0.28,
-            }}
-          >
-            Νοῦς
-          </span>
+      <div
+        className="emanation-ring emanation-ring-cosmos"
+        style={{
+          transform: `
+            translate(-50%, -50%)
+            scale(${1 + p * 0.22})
+            rotate(${p * 13}deg)
+          `,
+        }}
+      />
 
-          <span
-            style={{
-              transform: `translateY(${p * 60}px)`,
-              opacity: 0.58 + p * 0.42,
-            }}
-          >
-            Ψυχή
-          </span>
+      {/* =====================================================
+          İÇ HALKALAR
+          Daha ince çizgiler, ışığın katmanlarını hissettiriyor.
+          ===================================================== */}
 
-          <span
-            style={{
-              transform: `translateY(${p * 80}px)`,
-              opacity: 0.42 + p * 0.58,
-            }}
-          >
-            Κόσμος
-          </span>
+      <div className="emanation-ring-inner emanation-inner-nous" />
+      <div className="emanation-ring-inner emanation-inner-psyche" />
+      <div className="emanation-ring-inner emanation-inner-cosmos" />
 
-        </div>
+      {/* =====================================================
+          MERKEZ IŞIĞI
+          ===================================================== */}
 
+      <div
+        className="emanation-center-glow"
+        style={{
+          transform: `
+            translate(-50%, -50%)
+            scale(${1 + p * 0.28})
+          `,
+          opacity: 0.48 + p * 0.12,
+        }}
+      />
+
+      {/* =====================================================
+          BİR / TO EN
+          ===================================================== */}
+
+      <div
+        className="emanation-core"
+        style={{
+          transform: `
+            translate(-50%, -50%)
+            scale(${1 + p * 0.10})
+          `,
+        }}
+      >
+        <span>Τὸ Ἕν</span>
+        <small>BİR</small>
       </div>
-    </section>
+
+      {/* =====================================================
+          KAVRAM ETİKETLERİ
+
+          Halkaların üzerinde, fakat merkeze baskı yapmıyor.
+          ===================================================== */}
+
+      <div
+        className="emanation-node-label emanation-label-nous"
+        style={{
+          transform: `translateY(${p * -8}px)`,
+        }}
+      >
+        <span>Νοῦς</span>
+        <small>Nous</small>
+      </div>
+
+      <div
+        className="emanation-node-label emanation-label-psyche"
+        style={{
+          transform: `translateY(${p * 8}px)`,
+        }}
+      >
+        <span>Ψυχή</span>
+        <small>Psyukhe</small>
+      </div>
+
+      <div
+        className="emanation-node-label emanation-label-cosmos"
+        style={{
+          transform: `translateY(${p * 14}px)`,
+        }}
+      >
+        <span>Κόσμος</span>
+        <small>Kozmos</small>
+      </div>
+
+      {/* =====================================================
+          MERKEZDEN ÇIKAN ÇOK İNCE IŞINLAR
+          ===================================================== */}
+
+      <div className="emanation-ray emanation-ray-one" />
+      <div className="emanation-ray emanation-ray-two" />
+      <div className="emanation-ray emanation-ray-three" />
+      <div className="emanation-ray emanation-ray-four" />
+
+    </div>
   );
 }
 
 export default function Home({ siteSettings }) {
+  const [scrollProgress, setScrollProgress] = useState(0);
+
   const heroImageUrl =
     siteSettings?.hero_image_url || '';
 
   const heroImageCaption =
     siteSettings?.hero_image_caption || '';
 
+  useEffect(() => {
+    let ticking = false;
+
+    const updateScroll = () => {
+      if (ticking) return;
+
+      window.requestAnimationFrame(() => {
+        const section = document.querySelector(
+          '.modern-hero'
+        );
+
+        if (section) {
+          const rect =
+            section.getBoundingClientRect();
+
+          /*
+           * Hero artık uzun bir sahne.
+           *
+           * İçindeki .modern-hero-inner sticky
+           * olduğu için kullanıcı aşağı indikçe
+           * merkezdeki emanasyon sistemi ekranda kalıyor.
+           */
+
+          const scrollable =
+            section.offsetHeight -
+            window.innerHeight;
+
+          const progress =
+            scrollable > 0
+              ? Math.min(
+                  1,
+                  Math.max(
+                    0,
+                    -rect.top / scrollable
+                  )
+                )
+              : 0;
+
+          setScrollProgress(progress);
+        }
+
+        ticking = false;
+      });
+
+      ticking = true;
+    };
+
+    window.addEventListener(
+      'scroll',
+      updateScroll,
+      { passive: true }
+    );
+
+    updateScroll();
+
+    return () => {
+      window.removeEventListener(
+        'scroll',
+        updateScroll
+      );
+    };
+  }, []);
+
+  const p = scrollProgress;
+
   return (
     <Layout>
       <main className="modern-home">
 
         {/* =================================================
-            HERO
+            HERO / EMANATION SCENE
             ================================================= */}
 
         <section className="modern-hero">
 
-          <div
-            className="hero-noise"
-            aria-hidden="true"
-          />
+          <div className="modern-hero-inner">
 
-          <div className="hero-light hero-light-one" />
-          <div className="hero-light hero-light-two" />
+            {/* =================================================
+                ATMOSFER
+                ================================================= */}
 
-          {/* HERO ARKA PLAN HALKALARI */}
+            <div
+              className="hero-noise"
+              aria-hidden="true"
+            />
 
-          <div className="hero-orbit hero-orbit-one" />
-          <div className="hero-orbit hero-orbit-two" />
-          <div className="hero-orbit hero-orbit-three" />
+            <div
+              className="hero-light hero-light-one"
+              aria-hidden="true"
+            />
 
-          {/* Çok hafif merkez ışığı */}
+            <div
+              className="hero-light hero-light-two"
+              aria-hidden="true"
+            />
 
-          <div className="hero-core-glow" />
+            {/* =================================================
+                ORTA EMANASYON SAHNESİ
+                ================================================= */}
 
-          {/* =================================================
-              HERO METNİ
-              ================================================= */}
+            <EmanationScene
+              scrollProgress={p}
+            />
 
-          <div className="modern-hero-content">
+            {/* =================================================
+                SOL METİN
+                ================================================= */}
 
-            <div className="modern-badge">
-              <span className="modern-badge-dot" />
-              Plotinos Kütüphanesi
+            <div className="modern-hero-left">
+
+              <div className="modern-badge">
+                <span className="modern-badge-dot" />
+                Plotinos Kütüphanesi
+              </div>
+
+              <h1>
+                Bir'den <em>Tüm'e</em>,
+                <br />
+                taşan ışığın izinde
+              </h1>
+
+              <p className="modern-hero-description">
+                Plotinos'un Bir'den taşan
+                varlık düzenini, düşüncenin
+                izinde keşfedin.
+              </p>
+
             </div>
 
-            <h1>
-              Bir'den <em>Tüm'e</em>,
-              <br />
-              taşan ışığın izinde
-            </h1>
+            {/* =================================================
+                SAĞ NAVİGASYON
+                ================================================= */}
 
-            <div className="modern-hero-actions">
+            <div className="modern-hero-right">
 
               <Link
                 href="/kutuphane"
-                className="modern-primary-button"
+                className="modern-discover-link"
               >
-                <span>
-                  Kütüphaneyi Keşfet
+                <span className="modern-discover-number">
+                  01
                 </span>
 
-                <span className="modern-button-arrow">
-                  →
+                <span className="modern-discover-text">
+                  <strong>
+                    Kütüphaneyi Keşfet
+                  </strong>
+
+                  <small>
+                    Plotinos literatürüne açılan
+                    dijital arşiv
+                  </small>
+                </span>
+
+                <span className="modern-discover-arrow">
+                  ↗
                 </span>
               </Link>
 
               <Link
                 href="/via-plotin"
-                className="modern-secondary-button"
+                className="modern-discover-link"
               >
-                Via Plotin'i Oku
+                <span className="modern-discover-number">
+                  02
+                </span>
+
+                <span className="modern-discover-text">
+                  <strong>
+                    Via Plotin'i Keşfet
+                  </strong>
+
+                  <small>
+                    Plotinos düşüncesi üzerine
+                    seçilmiş okumalar
+                  </small>
+                </span>
+
+                <span className="modern-discover-arrow">
+                  ↗
+                </span>
               </Link>
 
             </div>
 
+            {/* =================================================
+                ALT BİLGİ
+                ================================================= */}
+
+            <div className="modern-hero-bottom">
+
+              <span>
+                [ THE ONE ]
+              </span>
+
+              <div className="modern-scroll-progress">
+                <span>
+                  01
+                </span>
+
+                <div>
+                  <i
+                    style={{
+                      transform:
+                        `scaleX(${Math.max(
+                          0.04,
+                          p
+                        )})`,
+                    }}
+                  />
+                </div>
+
+                <span>
+                  04
+                </span>
+              </div>
+
+              <span>
+                [ EMANATION ]
+              </span>
+
+            </div>
+
+            {/* =================================================
+                SCROLL INDICATOR
+                ================================================= */}
+
+            <div className="hero-scroll-indicator">
+              <span>Keşfet</span>
+
+              <span className="scroll-arrow">
+                ↓
+              </span>
+            </div>
+
           </div>
-
-          {/* =================================================
-              SCROLL
-              ================================================= */}
-
-          <div className="hero-scroll-indicator">
-            <span>Keşfet</span>
-            <span className="scroll-arrow">
-              ↓
-            </span>
-          </div>
-
         </section>
 
         {/* =================================================
@@ -305,12 +460,6 @@ export default function Home({ siteSettings }) {
 
           </section>
         )}
-
-        {/* =================================================
-            SUDÛR / EMANATION
-            ================================================= */}
-
-        <EmanationScene />
 
         {/* =================================================
             ZOTERO
@@ -365,7 +514,9 @@ export async function getServerSideProps() {
 
   return {
     props: {
-      siteSettings: siteSettings || null,
+      siteSettings:
+        siteSettings || null,
     },
   };
 }
+```
