@@ -1,359 +1,236 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/router';
 import Layout from '../components/Layout';
 import Link from 'next/link';
 import { supabase } from '../lib/supabaseClient';
 
-function EmanationScene() {
-  const [scrollProgress, setScrollProgress] = useState(0);
-
+// Basit "say-yukarı" animasyonu — sahte değil, gerçek veriden gelen
+// sayılara doğru sayarak ilerler.
+function useCountUp(target, duration = 1100) {
+  const [value, setValue] = useState(0);
   useEffect(() => {
-    let ticking = false;
-
-    const updateScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          const section = document.querySelector('.emanation-section');
-
-          if (section) {
-            const rect = section.getBoundingClientRect();
-            const viewport = window.innerHeight;
-
-            const total = section.offsetHeight - viewport;
-            const progress = total > 0
-              ? Math.min(1, Math.max(0, -rect.top / total))
-              : 0;
-
-            setScrollProgress(progress);
-          }
-
-          ticking = false;
-        });
-
-        ticking = true;
-      }
+    let start = null;
+    let raf;
+    const step = (ts) => {
+      if (start === null) start = ts;
+      const progress = Math.min((ts - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.round(eased * target));
+      if (progress < 1) raf = requestAnimationFrame(step);
     };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  return value;
+}
 
-    window.addEventListener('scroll', updateScroll, { passive: true });
-    updateScroll();
-
-    return () => {
-      window.removeEventListener('scroll', updateScroll);
-    };
-  }, []);
-
-  const p = scrollProgress;
+function StatCard({ label, sub, value, max, desc }) {
+  const count = useCountUp(value);
+  const pct = max ? Math.min(100, Math.round((value / max) * 100)) : 100;
 
   return (
-    <section className="emanation-section">
-      <div className="emanation-sticky">
-        <div
-          className="emanation-orbit orbit-one"
-          style={{
-            transform: `translate3d(${p * -40}px, ${p * 90}px, 0) scale(${1 + p * 0.08}) rotate(${p * 18}deg)`,
-          }}
-        />
-
-        <div
-          className="emanation-orbit orbit-two"
-          style={{
-            transform: `translate3d(${p * 55}px, ${p * 45}px, 0) scale(${1 + p * 0.15}) rotate(${p * -24}deg)`,
-          }}
-        />
-
-        <div
-          className="emanation-orbit orbit-three"
-          style={{
-            transform: `translate3d(${p * -25}px, ${p * 130}px, 0) scale(${1 + p * 0.22}) rotate(${p * 12}deg)`,
-          }}
-        />
-
-        <div
-          className="emanation-core"
-          style={{
-            transform: `translate3d(0, ${p * 110}px, 0) scale(${1 + p * 0.3})`,
-          }}
-        >
-          <span>Τὸ Ἕν</span>
-          <small>Bir</small>
-        </div>
-
-        <div
-          className="emanation-glow"
-          style={{
-            transform: `translate3d(0, ${p * 100}px, 0) scale(${1 + p * 0.4})`,
-            opacity: 0.5 - p * 0.18,
-          }}
-        />
-
-        <div className="emanation-labels">
-          <span
-            style={{
-              transform: `translateY(${p * 35}px)`,
-              opacity: 1 - p * 0.45,
-            }}
-          >
-            Bir
-          </span>
-
-          <span
-            style={{
-              transform: `translateY(${p * 55}px)`,
-              opacity: 0.8 + p * 0.2,
-            }}
-          >
-            Nous
-          </span>
-
-          <span
-            style={{
-              transform: `translateY(${p * 75}px)`,
-              opacity: 0.6 + p * 0.4,
-            }}
-          >
-            Psyche
-          </span>
-
-          <span
-            style={{
-              transform: `translateY(${p * 95}px)`,
-              opacity: 0.45 + p * 0.55,
-            }}
-          >
-            Kosmos
-          </span>
-        </div>
-
-        <div className="emanation-copy">
-          <span>01 · SUDÛR</span>
-
-          <h2>
-            Varlık,
-            <br />
-            <em>taşarak</em> çoğalır.
-          </h2>
-
-          <p>
-            Plotinos'un düşüncesinde her şey Bir'den taşar.
-            Nous'tan ruh'a, ruhtan duyulur dünyaya uzanan bu
-            hareket, bir eksilme değil, varlığın kendisini
-            açığa çıkarmasıdır.
-          </p>
-        </div>
+    <div className="home-stat-card">
+      <div className="home-stat-top">
+        <span className="home-stat-label">{label}</span>
+        <span className="home-stat-sub">{sub}</span>
       </div>
-    </section>
+
+      <div className="home-stat-number">{count}</div>
+
+      <div className="home-stat-desc">{desc}</div>
+
+      <div className="home-bar-track">
+        <div
+          className="home-bar-fill"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
   );
 }
 
-export default function Home({ siteSettings }) {
+export default function Home({ siteSettings, stats }) {
   const heroImageUrl = siteSettings?.hero_image_url || '';
   const heroImageCaption = siteSettings?.hero_image_caption || '';
 
   return (
     <Layout>
-      <main className="modern-home">
+      <section className="home-hero">
+        <div className="home-glow" aria-hidden="true" />
 
-        {/* =========================================
-            HERO
-        ========================================= */}
-        <section className="modern-hero">
+        <div className="home-badge">
+          <span className="dot" />
+          Plotinos Kütüphanesi
+        </div>
 
-          <div className="hero-noise" aria-hidden="true" />
+        <h1>
+          Bir'den <em>Tüm'e</em>,<br /> taşan ışığın izinde
+        </h1>
 
-          <div className="hero-light hero-light-one" />
-          <div className="hero-light hero-light-two" />
+        <p className="home-lead">
+          Neoplatonizm ve Plotinos düşüncesi üzerine, sürekli genişleyen
+          bir kaynakça: kitaplar, tezler, makaleler ve özgün yazılar
+          tek bir kütüphanede.
+        </p>
 
-          <div className="hero-ring hero-ring-one" />
-          <div className="hero-ring hero-ring-two" />
-          <div className="hero-ring hero-ring-three" />
+        <div className="home-cta-row">
+          <Link href="/kutuphane" className="btn">
+            Kütüphaneyi Keşfet
+          </Link>
 
-          <div className="hero-core">
-            <div className="hero-core-inner">
-              <span>01</span>
-            </div>
+          <Link href="/via-plotin" className="btn secondary">
+            Via Plotin'i Oku
+          </Link>
+        </div>
+      </section>
+
+      {/* CANLI KÜTÜPHANE PANELİ — gerçek Supabase verisinden */}
+      <div className="home-stats-wrap">
+        <div className="home-stats">
+          <StatCard
+            label="Kaynaklar"
+            sub="Toplam"
+            value={stats.sourceCount}
+            max={Math.max(stats.sourceCount, 50)}
+            desc="Kitap, tez ve makale"
+          />
+
+          <StatCard
+            label="Kategoriler"
+            sub="Kapsam"
+            value={stats.categoryCount}
+            max={11}
+            desc="Ontoloji'den Mistisizm'e"
+          />
+
+          <StatCard
+            label="Via Plotin"
+            sub="Yazı"
+            value={stats.postCount}
+            max={Math.max(stats.postCount, 20)}
+            desc="Araştırma notları"
+          />
+        </div>
+      </div>
+
+      {/* FOTO ŞERİDİ
+          Görsel varsa gösterilir.
+          Görsel yoksa şerit tamamen kaldırılır ve boşluk bırakmaz. */}
+      {heroImageUrl && (
+        <div className="photo-strip">
+          <div className="photo-strip-inner">
+            <img
+              src={heroImageUrl}
+              alt={heroImageCaption || 'Plotinos Kütüphanesi'}
+            />
+
+            {heroImageCaption && (
+              <div className="photo-strip-caption">
+                {heroImageCaption}
+              </div>
+            )}
           </div>
+        </div>
+      )}
 
-          <div className="modern-hero-content">
+      <section
+        className="section"
+        style={{ position: 'relative', zIndex: 1 }}
+      >
+        <div className="container">
 
-            <div className="modern-badge">
-              <span className="modern-badge-dot" />
-              Plotinos Kütüphanesi
-            </div>
+          {/* Kartlar */}
+          <div className="grid grid-2">
+            <Link href="/kutuphane" className="card">
+              <span className="tag">Kaynaklar</span>
 
-            <h1>
-              Bir'den <em>Tüm'e</em>,
-              <br />
-              taşan ışığın izinde
-            </h1>
+              <h3>Kütüphane</h3>
 
-            <p className="modern-hero-lead">
-              Neoplatonizm ve Plotinos düşüncesi üzerine,
-              sürekli genişleyen bir kaynakça:
-              <br className="desktop-break" />
-              kitaplar, tezler, makaleler ve özgün yazılar
-              tek bir kütüphanede.
-            </p>
-
-            <div className="modern-hero-actions">
-
-              <Link
-                href="/kutuphane"
-                className="modern-primary-button"
-              >
-                <span>Kütüphaneyi Keşfet</span>
-
-                <span className="modern-button-arrow">
-                  →
-                </span>
-              </Link>
-
-              <Link
-                href="/via-plotin"
-                className="modern-secondary-button"
-              >
-                Via Plotin'i Oku
-              </Link>
-
-            </div>
-
-          </div>
-
-          <div className="hero-bottom-line">
-            <span>NEOPLATONİZM</span>
-            <span className="hero-line" />
-            <span>FELSEFE · KAYNAKÇA · ARAŞTIRMA</span>
-          </div>
-
-          <div className="hero-scroll-indicator">
-            <span>Keşfet</span>
-            <span className="scroll-arrow">↓</span>
-          </div>
-
-        </section>
-
-
-        {/* =========================================
-            GEÇİCİ DUYURU FOTOĞRAFI
-            Sadece görsel varsa görünür.
-        ========================================= */}
-        {heroImageUrl && (
-          <section className="modern-announcement">
-            <div className="modern-announcement-inner">
-
-              <img
-                src={heroImageUrl}
-                alt={
-                  heroImageCaption ||
-                  'Plotinos Kütüphanesi'
-                }
-              />
-
-              {heroImageCaption && (
-                <div className="modern-announcement-caption">
-                  {heroImageCaption}
-                </div>
-              )}
-
-            </div>
-          </section>
-        )}
-
-
-        {/* =========================================
-            SUDÛR / AKIŞ SAHNESİ
-        ========================================= */}
-        <EmanationScene />
-
-
-        {/* =========================================
-            KÜTÜPHANE TANITIMI
-        ========================================= */}
-        <section className="library-intro">
-
-          <div className="library-intro-number">
-            02
-          </div>
-
-          <div className="library-intro-content">
-
-            <div className="library-intro-kicker">
-              PLOTİNOS KÜTÜPHANESİ
-            </div>
-
-            <h2>
-              Düşüncenin
-              <br />
-              <em>izini sür.</em>
-            </h2>
-
-            <p>
-              Plotinos Kütüphanesi, başta Enneadlar olmak üzere,
-              Plotinos düşüncesi üzerine hazırlanmış kitap, tez,
-              makale ve özgün yazılardan oluşan sürekli genişleyen
-              bir araştırma alanıdır.
-            </p>
-
-            <p>
-              Amacımız yalnızca kaynakları bir araya getirmek değil;
-              Plotinos'un düşüncesi etrafında oluşan literatürü
-              keşfedilebilir, bağlantılı ve yaşayan bir arşive
-              dönüştürmektir.
-            </p>
-
-            <Link
-              href="/kutuphane"
-              className="library-link"
-            >
-              Kütüphaneye geç
-              <span>→</span>
+              <p className="desc">
+                Plotinos Kütüphanesi, başta Enneadlar olmak üzere,
+                Plotinos düşüncesi üzerine hazırlanmış kitap, tez ve
+                makalelerden müteşekkil kaynakçamıza erişim sağlayan
+                bir portal sunmaktadır.
+              </p>
             </Link>
 
+            <Link href="/via-plotin" className="card">
+              <span className="tag">Deneme</span>
+
+              <h3>Via Plotin</h3>
+
+              <p className="desc">
+                Plotinos üzerine notlar, alıntılar ve bireysel yazılar.
+              </p>
+            </Link>
+
+            <Link href="/iletisim" className="card">
+              <span className="tag">İletişim</span>
+
+              <h3>İletişim</h3>
+
+              <p className="desc">
+                Sorularınız, katkılarınız ya da işbirliği önerileriniz için
+                iletişim bilgileri.
+              </p>
+            </Link>
           </div>
 
-          <div className="library-visual">
+          {/* Zotero Rehber Video Alanı */}
+          <div
+            style={{
+              marginTop: '48px',
+              backgroundColor: '#121110',
+              border: '1px solid rgba(212, 175, 55, 0.2)',
+              borderRadius: '12px',
+              padding: '28px 20px',
+            }}
+          >
+            <h3
+              style={{
+                color: '#d4af37',
+                fontFamily: 'serif',
+                fontSize: '1.3rem',
+                marginTop: 0,
+                marginBottom: '8px',
+                textAlign: 'center',
+              }}
+            >
+              Zotero Entegrasyonu & Kullanım Rehberi
+            </h3>
 
-            <div className="library-orbit orbit-a" />
-            <div className="library-orbit orbit-b" />
-            <div className="library-orbit orbit-c" />
-
-            <div className="library-center">
-              <span>ENNEADLAR</span>
-              <strong>∞</strong>
-            </div>
-
-          </div>
-
-        </section>
-
-
-        {/* =========================================
-            ZOTERO
-        ========================================= */}
-        <section className="zotero-modern">
-
-          <div className="zotero-modern-inner">
-
-            <div className="zotero-kicker">
-              03 · ARAŞTIRMA ARAÇLARI
-            </div>
-
-            <h2>
-              Kaynaklarını
-              <br />
-              <em>yanında taşı.</em>
-            </h2>
-
-            <p>
-              Kütüphanedeki kaynakları tek tıkla Zotero'ya
-              nasıl aktarabileceğinizi inceleyebilirsiniz.
+            <p
+              style={{
+                color: '#a0a0a0',
+                fontSize: '0.9rem',
+                marginTop: 0,
+                marginBottom: '20px',
+                textAlign: 'center',
+              }}
+            >
+              Kütüphanedeki kaynakları tek tıkla Zotero'ya nasıl
+              aktarabileceğinizi inceleyebilirsiniz.
             </p>
 
-            <div className="zotero-video">
-
+            <div
+              style={{
+                maxWidth: '800px',
+                margin: '0 auto',
+                borderRadius: '8px',
+                overflow: 'hidden',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                backgroundColor: '#000',
+              }}
+            >
               <video
                 controls
                 controlsList="nodownload"
                 onContextMenu={(e) => e.preventDefault()}
                 preload="metadata"
+                style={{
+                  width: '100%',
+                  display: 'block',
+                }}
               >
                 <source
                   src="/zotero-rehber.mp4"
@@ -362,18 +239,13 @@ export default function Home({ siteSettings }) {
 
                 Tarayıcınız video oynatmayı desteklemiyor.
               </video>
-
             </div>
-
           </div>
-
-        </section>
-
-      </main>
+        </div>
+      </section>
     </Layout>
   );
 }
-
 
 export async function getServerSideProps() {
   const { data: siteSettings } = await supabase
@@ -382,9 +254,26 @@ export async function getServerSideProps() {
     .eq('id', 1)
     .maybeSingle();
 
+  const { count: sourceCount } = await supabase
+    .from('sources')
+    .select('*', { count: 'exact', head: true });
+
+  const { count: postCount } = await supabase
+    .from('via_plotin')
+    .select('*', { count: 'exact', head: true });
+
+  // kutuphane.js'teki CATEGORY_SUBCATEGORY_MAP ile aynı 11 ana kategori sabit;
+  // burada ekstra bir sorguya gerek yok, panel doluluk oranını göstermek için kullanılıyor.
+  const categoryCount = 11;
+
   return {
     props: {
       siteSettings: siteSettings || null,
+      stats: {
+        sourceCount: sourceCount || 0,
+        postCount: postCount || 0,
+        categoryCount,
+      },
     },
   };
 }
