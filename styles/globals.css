@@ -602,3 +602,256 @@ a { color: inherit; text-decoration: none; }
   background: var(--gold);
   transition: width 1.1s cubic-bezier(0.22, 1, 0.36, 1);
 }
+
+/* =========================================================
+   SUDÛR & MODERN HOME DÜZENLEMELERİ (Son Eklenen Stilller)
+   ========================================================= */
+
+.modern-hero {
+  position: relative;
+  min-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 60px 28px;
+  overflow: hidden;
+}
+
+.modern-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: var(--ink-soft);
+  border: 1px solid var(--line-strong);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--parchment-dim);
+  margin-bottom: 24px;
+}
+
+.modern-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+}
+
+.modern-hero-content h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.8rem, 6.5vw, 4.8rem);
+  line-height: 1.1;
+  margin: 0 0 32px;
+}
+
+.modern-hero-content h1 em {
+  color: var(--gold-bright);
+  font-style: italic;
+}
+
+.modern-hero-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.modern-primary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 28px;
+  border-radius: 999px;
+  background: var(--gold);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: all 0.25s ease;
+  box-shadow: 0 10px 24px -10px rgba(183, 138, 52, 0.4);
+}
+
+.modern-primary-button:hover {
+  background: var(--gold-bright);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px -10px rgba(183, 138, 52, 0.6);
+}
+
+.modern-secondary-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 12px 28px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  color: var(--parchment);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: all 0.25s ease;
+}
+
+.modern-secondary-button:hover {
+  border-color: var(--gold);
+  color: var(--gold-bright);
+  transform: translateY(-2px);
+}
+
+.hero-bottom-line {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 50px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  color: var(--parchment-dim);
+}
+
+.hero-line {
+  height: 1px;
+  width: 40px;
+  background: var(--line-strong);
+}
+
+.hero-scroll-indicator {
+  margin-top: 30px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  color: var(--parchment-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  opacity: 0.7;
+}
+
+/* Dinamik Sudûr (Emanation) Sahnesi */
+.emanation-section {
+  position: relative;
+  height: 160vh;
+  width: 100%;
+}
+
+.emanation-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.emanation-orbit {
+  position: absolute;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  pointer-events: none;
+  transition: transform 0.05s linear;
+}
+
+.orbit-one { width: 280px; height: 280px; }
+.orbit-two { width: 420px; height: 420px; }
+.orbit-three { width: 560px; height: 560px; }
+
+.emanation-core {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: var(--ink-soft);
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 0 40px rgba(183, 138, 52, 0.15);
+  z-index: 2;
+}
+
+.emanation-core span {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  color: var(--gold-bright);
+}
+
+.emanation-core small {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--parchment-dim);
+}
+
+.emanation-glow {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--gold) 0%, transparent 70%);
+  filter: blur(20px);
+  pointer-events: none;
+}
+
+.emanation-labels {
+  position: absolute;
+  bottom: 12%;
+  display: flex;
+  gap: 28px;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  letter-spacing: 0.05em;
+  color: var(--parchment);
+  z-index: 3;
+}
+
+/* Zotero Rehber Bölümü */
+.zotero-modern {
+  padding: 80px 28px;
+  border-top: 1px solid var(--line);
+  text-align: center;
+}
+
+.zotero-modern-inner {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.zotero-kicker {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+
+.zotero-modern h2 {
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  margin: 0 0 16px;
+}
+
+.zotero-modern h2 em {
+  color: var(--gold-bright);
+  font-style: italic;
+}
+
+.zotero-modern p {
+  color: var(--parchment-dim);
+  font-size: 1rem;
+  margin-bottom: 32px;
+}
+
+.zotero-video video {
+  width: 100%;
+  max-width: 720px;
+  border-radius: 16px;
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 20px 50px -20px rgba(0,0,0,0.6);
+}
