@@ -20,21 +20,19 @@ function EmanationScene() {
 
             const total = section.offsetHeight - viewport;
 
-            const rawProgress =
+            /*
+             * Doğrudan scroll değerini kullanıyoruz.
+             *
+             * Burada easing veya transition yok.
+             * Böylece halka scroll hareketini gecikmeden
+             * takip ediyor ve hareket ağırlaşmıyor.
+             */
+            const progress =
               total > 0
                 ? Math.min(1, Math.max(0, -rect.top / total))
                 : 0;
 
-            /*
-             * Smoothstep easing:
-             * Başlangıçta yavaşlar,
-             * ortada hızlanır,
-             * sona yaklaşırken tekrar yavaşlar.
-             */
-            const smoothProgress =
-              rawProgress * rawProgress * (3 - 2 * rawProgress);
-
-            setScrollProgress(smoothProgress);
+            setScrollProgress(progress);
           }
 
           ticking = false;
@@ -44,7 +42,10 @@ function EmanationScene() {
       }
     };
 
-    window.addEventListener('scroll', updateScroll, { passive: true });
+    window.addEventListener('scroll', updateScroll, {
+      passive: true,
+    });
+
     updateScroll();
 
     return () => {
@@ -58,94 +59,104 @@ function EmanationScene() {
     <section className="emanation-section">
       <div className="emanation-sticky">
 
-        {/* DIŞ HALKA */}
+        {/* =================================================
+            ARKA PLAN HALKALARI
+            ================================================= */}
+
         <div
           className="emanation-orbit orbit-one"
           style={{
             transform: `
               translate3d(
-                ${p * -40}px,
-                ${p * 90}px,
+                ${p * -55}px,
+                ${p * 95}px,
                 0
               )
-              scale(${1 + p * 0.08})
-              rotate(${p * 18}deg)
+              scale(${1 + p * 0.10})
+              rotate(${p * 15}deg)
             `,
           }}
         />
 
-        {/* ORTA HALKA */}
         <div
           className="emanation-orbit orbit-two"
           style={{
             transform: `
               translate3d(
+                ${p * 65}px,
                 ${p * 55}px,
-                ${p * 45}px,
                 0
               )
-              scale(${1 + p * 0.15})
-              rotate(${p * -24}deg)
+              scale(${1 + p * 0.16})
+              rotate(${p * -20}deg)
             `,
           }}
         />
 
-        {/* DIŞ HALKA */}
         <div
           className="emanation-orbit orbit-three"
           style={{
             transform: `
               translate3d(
-                ${p * -25}px,
-                ${p * 130}px,
+                ${p * -35}px,
+                ${p * 125}px,
                 0
               )
-              scale(${1 + p * 0.22})
-              rotate(${p * 12}deg)
+              scale(${1 + p * 0.24})
+              rotate(${p * 10}deg)
             `,
           }}
         />
 
-        {/* MERKEZ: Τὸ Ἕν */}
+        {/* =================================================
+            MERKEZ
+            ================================================= */}
+
         <div
           className="emanation-core"
           style={{
             transform: `
               translate3d(
                 0,
-                ${p * 110}px,
+                ${p * 105}px,
                 0
               )
-              scale(${1 + p * 0.3})
+              scale(${1 + p * 0.22})
             `,
           }}
         >
           <span>Τὸ Ἕν</span>
         </div>
 
-        {/* MERKEZ IŞIĞI */}
+        {/* =================================================
+            IŞIK
+            ================================================= */}
+
         <div
           className="emanation-glow"
           style={{
             transform: `
               translate3d(
                 0,
-                ${p * 100}px,
+                ${p * 95}px,
                 0
               )
-              scale(${1 + p * 0.4})
+              scale(${1 + p * 0.35})
             `,
-            opacity: 0.5 - p * 0.18,
+            opacity: 0.38 - p * 0.12,
           }}
         />
 
-        {/* GREKÇE KAVRAMLAR */}
+        {/* =================================================
+            GREKÇE KAVRAMLAR
+            ================================================= */}
+
         <div className="emanation-labels">
 
           <span
             style={{
-              transform: `translateY(${p * 55}px)`,
-              opacity: 0.8 + p * 0.2,
+              transform: `translateY(${p * 40}px)`,
+              opacity: 0.72 + p * 0.28,
             }}
           >
             Νοῦς
@@ -153,8 +164,8 @@ function EmanationScene() {
 
           <span
             style={{
-              transform: `translateY(${p * 80}px)`,
-              opacity: 0.6 + p * 0.4,
+              transform: `translateY(${p * 60}px)`,
+              opacity: 0.58 + p * 0.42,
             }}
           >
             Ψυχή
@@ -162,30 +173,35 @@ function EmanationScene() {
 
           <span
             style={{
-              transform: `translateY(${p * 105}px)`,
-              opacity: 0.45 + p * 0.55,
+              transform: `translateY(${p * 80}px)`,
+              opacity: 0.42 + p * 0.58,
             }}
           >
             Κόσμος
           </span>
 
         </div>
+
       </div>
     </section>
   );
 }
 
 export default function Home({ siteSettings }) {
-  const heroImageUrl = siteSettings?.hero_image_url || '';
-  const heroImageCaption = siteSettings?.hero_image_caption || '';
+  const heroImageUrl =
+    siteSettings?.hero_image_url || '';
+
+  const heroImageCaption =
+    siteSettings?.hero_image_caption || '';
 
   return (
     <Layout>
       <main className="modern-home">
 
-        {/* =====================================================
+        {/* =================================================
             HERO
-            ===================================================== */}
+            ================================================= */}
+
         <section className="modern-hero">
 
           <div
@@ -196,14 +212,19 @@ export default function Home({ siteSettings }) {
           <div className="hero-light hero-light-one" />
           <div className="hero-light hero-light-two" />
 
-          <div className="hero-ring hero-ring-one" />
-          <div className="hero-ring hero-ring-two" />
-          <div className="hero-ring hero-ring-three" />
+          {/* HERO ARKA PLAN HALKALARI */}
 
-          {/* MERKEZ */}
-          <div className="hero-core">
-            <div className="hero-core-inner" />
-          </div>
+          <div className="hero-orbit hero-orbit-one" />
+          <div className="hero-orbit hero-orbit-two" />
+          <div className="hero-orbit hero-orbit-three" />
+
+          {/* Çok hafif merkez ışığı */}
+
+          <div className="hero-core-glow" />
+
+          {/* =================================================
+              HERO METNİ
+              ================================================= */}
 
           <div className="modern-hero-content">
 
@@ -224,7 +245,10 @@ export default function Home({ siteSettings }) {
                 href="/kutuphane"
                 className="modern-primary-button"
               >
-                <span>Kütüphaneyi Keşfet</span>
+                <span>
+                  Kütüphaneyi Keşfet
+                </span>
+
                 <span className="modern-button-arrow">
                   →
                 </span>
@@ -241,21 +265,26 @@ export default function Home({ siteSettings }) {
 
           </div>
 
-          {/* ALT BİLGİ SATIRI KALDIRILDI */}
-          <div className="hero-bottom-line" />
+          {/* =================================================
+              SCROLL
+              ================================================= */}
 
           <div className="hero-scroll-indicator">
             <span>Keşfet</span>
-            <span className="scroll-arrow">↓</span>
+            <span className="scroll-arrow">
+              ↓
+            </span>
           </div>
 
         </section>
 
-        {/* =====================================================
+        {/* =================================================
             DUYURU FOTOĞRAFI
-            ===================================================== */}
+            ================================================= */}
+
         {heroImageUrl && (
           <section className="modern-announcement">
+
             <div className="modern-announcement-inner">
 
               <img
@@ -273,24 +302,28 @@ export default function Home({ siteSettings }) {
               )}
 
             </div>
+
           </section>
         )}
 
-        {/* =====================================================
-            SUDÛR / EMANASYON
-            ===================================================== */}
+        {/* =================================================
+            SUDÛR / EMANATION
+            ================================================= */}
+
         <EmanationScene />
 
-        {/* =====================================================
+        {/* =================================================
             ZOTERO
-            ===================================================== */}
+            ================================================= */}
+
         <section className="zotero-modern">
 
           <div className="zotero-modern-inner">
 
             <p className="zotero-description">
-              Kütüphanedeki kaynakları tek tıkla Zotero'ya
-              nasıl aktarabileceğinizi inceleyebilirsiniz.
+              Kütüphanedeki kaynakları tek tıkla
+              Zotero'ya nasıl aktarabileceğinizi
+              inceleyebilirsiniz.
             </p>
 
             <div className="zotero-video">
@@ -298,7 +331,9 @@ export default function Home({ siteSettings }) {
               <video
                 controls
                 controlsList="nodownload"
-                onContextMenu={(e) => e.preventDefault()}
+                onContextMenu={(e) =>
+                  e.preventDefault()
+                }
                 preload="metadata"
               >
                 <source
@@ -306,7 +341,8 @@ export default function Home({ siteSettings }) {
                   type="video/mp4"
                 />
 
-                Tarayıcınız video oynatmayı desteklemiyor.
+                Tarayıcınız video oynatmayı
+                desteklemiyor.
               </video>
 
             </div>
