@@ -191,6 +191,7 @@ export default function Admin() {
           <SourcesAdmin password={password} />
           <ViaPlotinAdmin password={password} />
           <ContactAdmin password={password} />
+          <SiteSettingsAdmin password={password} />
         </div>
       </section>
     </Layout>
@@ -844,6 +845,77 @@ function ViaPlotinAdmin({ password }) {
         ))}
         {!loading && posts.length === 0 && <p className="status">Henüz eklenmiş yazı yok.</p>}
       </div>
+    </div>
+  );
+}
+
+function SiteSettingsAdmin({ password }) {
+  const [form, setForm] = useState({ hero_image_url: '', hero_image_caption: '' });
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/admin/site-settings', { headers: authHeaders(password) })
+      .then((r) => r.json())
+      .then((d) =>
+        setForm({
+          hero_image_url: d?.hero_image_url || '',
+          hero_image_caption: d?.hero_image_caption || '',
+        })
+      )
+      .finally(() => setLoading(false));
+  }, []); // eslint-disable-line
+
+  async function save() {
+    setStatus(null);
+    const res = await fetch('/api/admin/site-settings', {
+      method: 'PUT',
+      headers: authHeaders(password),
+      body: JSON.stringify(form),
+    });
+    setStatus(res.ok ? { ok: true, msg: 'Kaydedildi.' } : { ok: false, msg: 'Hata oluştu.' });
+  }
+
+  return (
+    <div className="admin-section" style={{ marginTop: 40 }}>
+      <h2 style={{ fontFamily: 'var(--font-display)', marginTop: 0 }}>Ana Sayfa Görseli (Şerit)</h2>
+      <p className="status" style={{ marginTop: 0, marginBottom: 16 }}>
+        Ana sayfada, üst menünün hemen altında görünen fotoğraf şeridi. Boş
+        bırakılırsa yerine sade bir yer tutucu gösterilir.
+      </p>
+      {loading ? (
+        <p className="status">Yükleniyor...</p>
+      ) : (
+        <>
+          <div className="field">
+            <label>Görsel Adresi (URL)</label>
+            <input
+              value={form.hero_image_url}
+              onChange={(e) => setForm({ ...form, hero_image_url: e.target.value })}
+              placeholder="https://..."
+            />
+          </div>
+          <div className="field">
+            <label>Alt Yazı (opsiyonel)</label>
+            <input
+              value={form.hero_image_caption}
+              onChange={(e) => setForm({ ...form, hero_image_caption: e.target.value })}
+              placeholder="Örn: Enneadlar, İstanbul Üniversitesi Nüshası"
+            />
+          </div>
+          {form.hero_image_url && (
+            <div style={{ marginBottom: 16, maxWidth: 420 }}>
+              <img
+                src={form.hero_image_url}
+                alt="Önizleme"
+                style={{ width: '100%', borderRadius: 6, border: '1px solid var(--line)' }}
+              />
+            </div>
+          )}
+          <button className="btn" onClick={save}>Kaydet</button>
+          {status && <p className={`status ${status.ok ? 'ok' : 'err'}`}>{status.msg}</p>}
+        </>
+      )}
     </div>
   );
 }

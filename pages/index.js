@@ -2,8 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Layout, { EmanationRings } from '../components/Layout';
 import Link from 'next/link';
+import { supabase } from '../lib/supabaseClient';
 
-export default function Home() {
+export default function Home({ siteSettings }) {
+  const heroImageUrl = siteSettings?.hero_image_url || '';
+  const heroImageCaption = siteSettings?.hero_image_caption || '';
+
   return (
     <Layout>
       <section className="hero" style={{ position: 'relative', zIndex: 10 }}>
@@ -17,6 +21,22 @@ export default function Home() {
           Bir'den <em>Tüm'e</em>,<br /> taşan ışığın izinde
         </h1>
       </section>
+
+      {/* FOTO ŞERİDİ — admin panelinden (Site Görseli) değiştirilebilir */}
+      <div className="photo-strip">
+        <div className="photo-strip-inner">
+          {heroImageUrl ? (
+            <img src={heroImageUrl} alt={heroImageCaption || 'Plotinos Kütüphanesi'} />
+          ) : (
+            <div className="photo-strip-placeholder">
+              Enneadlar · Görsel eklenmedi — Admin panelinden ekleyebilirsiniz
+            </div>
+          )}
+          {heroImageUrl && heroImageCaption && (
+            <div className="photo-strip-caption">{heroImageCaption}</div>
+          )}
+        </div>
+      </div>
 
       <section className="section" style={{ position: 'relative', zIndex: 1 }}>
         <div className="container">
@@ -119,4 +139,18 @@ export default function Home() {
       </section>
     </Layout>
   );
+}
+
+export async function getServerSideProps() {
+  const { data } = await supabase
+    .from('site_settings')
+    .select('*')
+    .eq('id', 1)
+    .maybeSingle();
+
+  return {
+    props: {
+      siteSettings: data || null,
+    },
+  };
 }
