@@ -22,21 +22,25 @@ export default function Home({ siteSettings }) {
         </h1>
       </section>
 
-      {/* FOTO ŞERİDİ — admin panelinden (Site Görseli) değiştirilebilir */}
-      <div className="photo-strip">
-        <div className="photo-strip-inner">
-          {heroImageUrl ? (
-            <img src={heroImageUrl} alt={heroImageCaption || 'Plotinos Kütüphanesi'} />
-          ) : (
-            <div className="photo-strip-placeholder">
-              Enneadlar · Görsel eklenmedi — Admin panelinden ekleyebilirsiniz
-            </div>
-          )}
-          {heroImageUrl && heroImageCaption && (
-            <div className="photo-strip-caption">{heroImageCaption}</div>
-          )}
+      {/* FOTO ŞERİDİ
+          Görsel eklenmişse gösterilir.
+          Görsel yoksa şerit tamamen kaldırılır ve boşluk bırakmaz. */}
+      {heroImageUrl && (
+        <div className="photo-strip">
+          <div className="photo-strip-inner">
+            <img
+              src={heroImageUrl}
+              alt={heroImageCaption || 'Plotinos Kütüphanesi'}
+            />
+
+            {heroImageCaption && (
+              <div className="photo-strip-caption">
+                {heroImageCaption}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       <section className="section" style={{ position: 'relative', zIndex: 1 }}>
         <div className="container">
