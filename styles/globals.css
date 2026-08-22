@@ -1,4 +1,3 @@
-```css
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
@@ -355,15 +354,27 @@ a {
 
   transform-origin: center center;
 
-  will-change: transform;
+  /*
+   * Scroll ölçeği JS tarafından veriliyor.
+   * CSS animasyonu transform'a dokunmuyor.
+   * Böylece iki animasyon birbirini ezmiyor.
+   */
+  transform:
+    translate(-50%, -50%)
+    scale(var(--ring-scroll, 1));
+
+  will-change: transform, opacity;
 
   backface-visibility: hidden;
 
   animation:
     ring-breathe
-    6.5s
+    7.5s
     ease-in-out
     infinite;
+
+  transition:
+    transform 0.08s linear;
 }
 
 .emanation-ring-core {
@@ -433,11 +444,11 @@ a {
 @keyframes ring-breathe {
   0%,
   100% {
-    opacity: 0.72;
+    opacity: 0.58;
   }
 
   50% {
-    opacity: 1;
+    opacity: 0.95;
   }
 }
 
@@ -517,18 +528,6 @@ a {
 
 /* =========================================================
    IŞIK DALGASI
-
-   Dalgalar merkezden çıkar.
-   Her biri farklı gecikmeyle başlar.
-
-   Böylece:
-   Bir parlar
-   ↓
-   Nous halkası parlar
-   ↓
-   Psyukhe alanı parlar
-   ↓
-   Kozmos'a yayılır
    ========================================================= */
 
 .emanation-pulse {
@@ -540,8 +539,8 @@ a {
   width: 115px;
   height: 115px;
 
-  margin-left: 0;
-  margin-top: 0;
+  margin-left: -57.5px;
+  margin-top: -57.5px;
 
   border-radius: 50%;
 
@@ -549,15 +548,22 @@ a {
     1px solid
     rgba(217, 184, 105, 0.55);
 
-  transform-origin: center center;
-
   pointer-events: none;
 
   mix-blend-mode: screen;
 
+  /*
+   * Scroll genel başlangıç ölçeğini belirliyor.
+   */
+  transform:
+    translate(0, 0)
+    scale(var(--pulse-scroll, 0.72));
+
+  will-change: transform, opacity;
+
   animation:
     emanation-wave
-    6s
+    7s
     cubic-bezier(0.16, 1, 0.3, 1)
     infinite;
 }
@@ -567,50 +573,63 @@ a {
 }
 
 .emanation-pulse-two {
-  animation-delay: 2s;
+  animation-delay: 2.3s;
 
   border-color:
     rgba(217, 184, 105, 0.38);
 }
 
 .emanation-pulse-three {
-  animation-delay: 4s;
+  animation-delay: 4.6s;
 
   border-color:
     rgba(237, 230, 214, 0.25);
 }
 
 @keyframes emanation-wave {
+
   0% {
     opacity: 0;
 
     transform:
-      translate(-50%, -50%)
-      scale(0.22);
+      translate(0, 0)
+      scale(var(--pulse-scroll, 0.72));
   }
 
-  7% {
-    opacity: 0.85;
+  8% {
+    opacity: 0.72;
   }
 
-  24% {
-    opacity: 0.55;
+  28% {
+    opacity: 0.42;
+
+    transform:
+      translate(0, 0)
+      scale(calc(var(--pulse-scroll, 0.72) + 0.65));
   }
 
-  48% {
-    opacity: 0.22;
+  52% {
+    opacity: 0.18;
+
+    transform:
+      translate(0, 0)
+      scale(calc(var(--pulse-scroll, 0.72) + 1.55));
   }
 
-  70% {
-    opacity: 0.06;
+  76% {
+    opacity: 0.045;
+
+    transform:
+      translate(0, 0)
+      scale(calc(var(--pulse-scroll, 0.72) + 2.7));
   }
 
   100% {
     opacity: 0;
 
     transform:
-      translate(-50%, -50%)
-      scale(4.5);
+      translate(0, 0)
+      scale(calc(var(--pulse-scroll, 0.72) + 3.8));
   }
 }
 
@@ -647,9 +666,13 @@ a {
 
   z-index: 1;
 
+  transform:
+    translate(0, 0)
+    scale(var(--glow-scroll, 1));
+
   animation:
     core-light-pulse
-    4.8s
+    5.5s
     ease-in-out
     infinite;
 }
@@ -657,18 +680,16 @@ a {
 @keyframes core-light-pulse {
   0%,
   100% {
-    opacity: 0.55;
+    opacity: 0.48;
   }
 
   50% {
-    opacity: 0.95;
+    opacity: 0.85;
   }
 }
 
 /* =========================================================
    BİR
-
-   En parlak nokta.
    ========================================================= */
 
 .emanation-core {
@@ -709,11 +730,15 @@ a {
 
   z-index: 5;
 
+  transform:
+    translate(0, 0)
+    scale(var(--core-scroll, 1));
+
   will-change: transform;
 
   animation:
     core-breathe
-    4.2s
+    4.8s
     ease-in-out
     infinite;
 }
@@ -733,7 +758,7 @@ a {
 
   animation:
     core-ring
-    4.2s
+    4.8s
     ease-in-out
     infinite;
 }
@@ -783,12 +808,12 @@ a {
   0%,
   100% {
     transform: scale(1);
-    opacity: 0.45;
+    opacity: 0.35;
   }
 
   50% {
-    transform: scale(1.06);
-    opacity: 0.9;
+    transform: scale(1.07);
+    opacity: 0.85;
   }
 }
 
@@ -813,9 +838,12 @@ a {
 
   will-change: transform;
 
+  transform:
+    translateY(var(--label-scroll-y, 0px));
+
   animation:
     label-breathe
-    5s
+    5.5s
     ease-in-out
     infinite;
 }
@@ -866,7 +894,7 @@ a {
 @keyframes label-breathe {
   0%,
   100% {
-    opacity: 0.72;
+    opacity: 0.68;
   }
 
   50% {
@@ -2904,4 +2932,3 @@ a {
       0.01ms !important;
   }
 }
-```

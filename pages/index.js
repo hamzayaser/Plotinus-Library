@@ -1,4 +1,3 @@
-```jsx
 import { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import Link from 'next/link';
@@ -12,35 +11,28 @@ function EmanationScene({ scrollProgress }) {
 
       {/* =====================================================
           MERKEZDEN DIŞARI YAYILAN IŞIK DALGALARI
+          Scroll ile genel ölçek değişiyor.
+          CSS animasyonu ise kendi nefesini ayrıca yapıyor.
           ===================================================== */}
 
       <div
         className="emanation-pulse emanation-pulse-one"
         style={{
-          transform: `
-            translate(-50%, -50%)
-            scale(${0.72 + p * 0.12})
-          `,
+          '--pulse-scroll': 0.72 + p * 0.12,
         }}
       />
 
       <div
         className="emanation-pulse emanation-pulse-two"
         style={{
-          transform: `
-            translate(-50%, -50%)
-            scale(${0.58 + p * 0.16})
-          `,
+          '--pulse-scroll': 0.58 + p * 0.16,
         }}
       />
 
       <div
         className="emanation-pulse emanation-pulse-three"
         style={{
-          transform: `
-            translate(-50%, -50%)
-            scale(${0.42 + p * 0.20})
-          `,
+          '--pulse-scroll': 0.42 + p * 0.20,
         }}
       />
 
@@ -49,56 +41,40 @@ function EmanationScene({ scrollProgress }) {
 
           Bir → Nous → Psyukhe → Kozmos
 
-          Her halka bağımsız nefes alıyor.
-          Scroll ayrıca ölçek ve konumu etkiliyor.
+          Scroll ilerledikçe halkalar genişliyor.
+          CSS tarafındaki nefes animasyonu ayrıca devam ediyor.
           ===================================================== */}
 
       <div
         className="emanation-ring emanation-ring-core"
         style={{
-          transform: `
-            translate(-50%, -50%)
-            scale(${1 + p * 0.05})
-          `,
+          '--ring-scroll': 1 + p * 0.05,
         }}
       />
 
       <div
         className="emanation-ring emanation-ring-nous"
         style={{
-          transform: `
-            translate(-50%, -50%)
-            scale(${1 + p * 0.10})
-            rotate(${p * 8}deg)
-          `,
+          '--ring-scroll': 1 + p * 0.10,
         }}
       />
 
       <div
         className="emanation-ring emanation-ring-psyche"
         style={{
-          transform: `
-            translate(-50%, -50%)
-            scale(${1 + p * 0.16})
-            rotate(${p * -10}deg)
-          `,
+          '--ring-scroll': 1 + p * 0.16,
         }}
       />
 
       <div
         className="emanation-ring emanation-ring-cosmos"
         style={{
-          transform: `
-            translate(-50%, -50%)
-            scale(${1 + p * 0.22})
-            rotate(${p * 13}deg)
-          `,
+          '--ring-scroll': 1 + p * 0.22,
         }}
       />
 
       {/* =====================================================
           İÇ HALKALAR
-          Daha ince çizgiler, ışığın katmanlarını hissettiriyor.
           ===================================================== */}
 
       <div className="emanation-ring-inner emanation-inner-nous" />
@@ -112,10 +88,7 @@ function EmanationScene({ scrollProgress }) {
       <div
         className="emanation-center-glow"
         style={{
-          transform: `
-            translate(-50%, -50%)
-            scale(${1 + p * 0.28})
-          `,
+          '--glow-scroll': 1 + p * 0.28,
           opacity: 0.48 + p * 0.12,
         }}
       />
@@ -127,10 +100,7 @@ function EmanationScene({ scrollProgress }) {
       <div
         className="emanation-core"
         style={{
-          transform: `
-            translate(-50%, -50%)
-            scale(${1 + p * 0.10})
-          `,
+          '--core-scroll': 1 + p * 0.10,
         }}
       >
         <span>Τὸ Ἕν</span>
@@ -139,14 +109,12 @@ function EmanationScene({ scrollProgress }) {
 
       {/* =====================================================
           KAVRAM ETİKETLERİ
-
-          Halkaların üzerinde, fakat merkeze baskı yapmıyor.
           ===================================================== */}
 
       <div
         className="emanation-node-label emanation-label-nous"
         style={{
-          transform: `translateY(${p * -8}px)`,
+          '--label-scroll-y': `${p * -8}px`,
         }}
       >
         <span>Νοῦς</span>
@@ -156,7 +124,7 @@ function EmanationScene({ scrollProgress }) {
       <div
         className="emanation-node-label emanation-label-psyche"
         style={{
-          transform: `translateY(${p * 8}px)`,
+          '--label-scroll-y': `${p * 8}px`,
         }}
       >
         <span>Ψυχή</span>
@@ -166,7 +134,7 @@ function EmanationScene({ scrollProgress }) {
       <div
         className="emanation-node-label emanation-label-cosmos"
         style={{
-          transform: `translateY(${p * 14}px)`,
+          '--label-scroll-y': `${p * 14}px`,
         }}
       >
         <span>Κόσμος</span>
@@ -202,21 +170,12 @@ export default function Home({ siteSettings }) {
       if (ticking) return;
 
       window.requestAnimationFrame(() => {
-        const section = document.querySelector(
-          '.modern-hero'
-        );
+        const section =
+          document.querySelector('.modern-hero');
 
         if (section) {
           const rect =
             section.getBoundingClientRect();
-
-          /*
-           * Hero artık uzun bir sahne.
-           *
-           * İçindeki .modern-hero-inner sticky
-           * olduğu için kullanıcı aşağı indikçe
-           * merkezdeki emanasyon sistemi ekranda kalıyor.
-           */
 
           const scrollable =
             section.offsetHeight -
@@ -391,6 +350,7 @@ export default function Home({ siteSettings }) {
               </span>
 
               <div className="modern-scroll-progress">
+
                 <span>
                   01
                 </span>
@@ -410,6 +370,7 @@ export default function Home({ siteSettings }) {
                 <span>
                   04
                 </span>
+
               </div>
 
               <span>
@@ -423,11 +384,15 @@ export default function Home({ siteSettings }) {
                 ================================================= */}
 
             <div className="hero-scroll-indicator">
-              <span>Keşfet</span>
+
+              <span>
+                Keşfet
+              </span>
 
               <span className="scroll-arrow">
                 ↓
               </span>
+
             </div>
 
           </div>
@@ -492,6 +457,7 @@ export default function Home({ siteSettings }) {
 
                 Tarayıcınız video oynatmayı
                 desteklemiyor.
+
               </video>
 
             </div>
@@ -506,11 +472,12 @@ export default function Home({ siteSettings }) {
 }
 
 export async function getServerSideProps() {
-  const { data: siteSettings } = await supabase
-    .from('site_settings')
-    .select('*')
-    .eq('id', 1)
-    .maybeSingle();
+  const { data: siteSettings } =
+    await supabase
+      .from('site_settings')
+      .select('*')
+      .eq('id', 1)
+      .maybeSingle();
 
   return {
     props: {
@@ -519,4 +486,3 @@ export async function getServerSideProps() {
     },
   };
 }
-```
