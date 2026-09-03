@@ -47,7 +47,6 @@ const TIP_FIELD_CONFIG = {
     cilt: { label: 'Cilt' },
     sayi: { label: 'Sayı' },
     sayfa_araligi: { label: 'Sayfa Aralığı', placeholder: 'Örn: 55-78' },
-    // Not: İsnad'da makaleler için DOI numarası önerilir, istenirse pdf_url gibi doi de tutulabilir.
   },
   'Yüksek Lisans Tezi': {
     universite: { label: 'Üniversite', placeholder: 'Örn: Marmara Üniversitesi' },
@@ -75,7 +74,6 @@ const TIP_FIELD_CONFIG = {
     sayfa_araligi: { label: 'Sayfa Aralığı' },
   },
 };
-
 
 const EMPTY_SOURCE = {
   baslik: '',
@@ -248,7 +246,7 @@ function MultiSelectDropdown({ selected, onChange, options, placeholder }) {
           color: selected.length ? 'var(--parchment, #fff)' : 'var(--parchment-dim, #999)',
           cursor: options.length === 0 ? 'not-allowed' : 'pointer',
           display: 'flex',
-          justifySpace: 'space-between',
+          justifyContent: 'space-between',
           alignItems: 'center',
           fontSize: '0.85rem',
           opacity: options.length === 0 ? 0.5 : 1,
@@ -324,12 +322,9 @@ function SourceFormFields({ form, setForm, handleSubmit, status, editingId, onCa
     });
   };
 
-  // Seçilen tipe göre hangi alanların görüneceğini belirle
   const cfg = TIP_FIELD_CONFIG[form.tip] || {};
 
   function handleTipChange(newTip) {
-    // Tip değişince, yeni tipte görünmeyecek alanları temizle (eski verinin
-    // yanlışlıkla başka bir kayıt tipine sızmasını önlemek için)
     const newCfg = TIP_FIELD_CONFIG[newTip] || {};
     const clearIfHidden = (key) => (newCfg[key] ? form[key] : '');
     setForm({
@@ -538,9 +533,17 @@ function SourcesAdmin({ password }) {
 
   async function load() {
     setLoading(true);
-    const res = await fetch('/api/admin/sources', { headers: authHeaders(password) });
-    if (res.ok) setSources(await res.json());
-    setLoading(false);
+    try {
+      const res = await fetch('/api/admin/sources', { headers: authHeaders(password) });
+      if (res.ok) {
+        const data = await res.json();
+        setSources(Array.isArray(data) ? data : (data.data || []));
+      }
+    } catch (err) {
+      console.error('Yükleme hatası:', err);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { load(); }, []); // eslint-disable-line
@@ -647,7 +650,6 @@ function SourcesAdmin({ password }) {
     <div className="admin-section">
       <h2 style={{ fontFamily: 'var(--font-display)', marginTop: 0 }}>Yeni Kaynak Ekle</h2>
 
-      {/* Yeni Kaynak Ekleme Formu */}
       <SourceFormFields
         form={addForm}
         setForm={setAddForm}
@@ -659,24 +661,29 @@ function SourcesAdmin({ password }) {
       <div style={{ marginTop: 40 }}>
         <h3>Ekli Kaynaklar ({sources.length})</h3>
         {loading && <p className="status">Yükleniyor...</p>}
-        {!loading && displayedSources.map((s) => (
-          <div className="admin-row" key={s.id}>
-            <div>
-              <strong>{s.baslik}</strong>
-              <div className="meta">
-                {s.yazar} {s.cevirmen ? `(Çev: ${s.cevirmen})` : ''} {s.yil ? `· ${s.yil}` : ''} {s.tip ? `· ${s.tip}` : ''} {s.dil ? `· ${s.dil}` : ''} ·
-                <span style={{ color: 'var(--color-primary, #c5a059)', marginLeft: 4 }}>
-                  [{s.kategori} {s.alt_kategori ? `> ${s.alt_kategori}` : ''}]
-                </span>
-                {s.pdf_url && <span style={{ marginLeft: 8 }}>📄 PDF Var</span>}
+        {!loading && displayedSources.map((s) => {
+          const katStr = Array.isArray(s.kategori) ? s.kategori.join(', ') : s.kategori;
+          const altKatStr = Array.isArray(s.alt_kategori) ? s.alt_kategori.join(', ') : s.alt_kategori;
+
+          return (
+            <div className="admin-row" key={s.id}>
+              <div>
+                <strong>{s.baslik}</strong>
+                <div className="meta">
+                  {s.yazar} {s.cevirmen ? `(Çev: ${s.cevirmen})` : ''} {s.yil ? `· ${s.yil}` : ''} {s.tip ? `· ${s.tip}` : ''} {s.dil ? `· ${s.dil}` : ''} ·
+                  <span style={{ color: 'var(--color-primary, #c5a059)', marginLeft: 4 }}>
+                    [{katStr}{altKatStr ? ` > ${altKatStr}` : ''}]
+                  </span>
+                  {s.pdf_url && <span style={{ marginLeft: 8 }}>📄 PDF Var</span>}
+                </div>
+              </div>
+              <div>
+                <button className="btn secondary" onClick={() => startEdit(s)}>Düzenle</button>
+                <button className="btn danger" style={{ marginLeft: 8 }} onClick={() => handleDelete(s.id)}>Sil</button>
               </div>
             </div>
-            <div>
-              <button className="btn secondary" onClick={() => startEdit(s)}>Düzenle</button>
-              <button className="btn danger" style={{ marginLeft: 8 }} onClick={() => handleDelete(s.id)}>Sil</button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
 
         {!loading && sources.length > 5 && (
           <button className="btn secondary" style={{ marginTop: 12, width: '100%' }} onClick={() => setShowAllSources(!showAllSources)}>
@@ -687,7 +694,6 @@ function SourcesAdmin({ password }) {
         {!loading && sources.length === 0 && <p className="status">Henüz kaynak yok.</p>}
       </div>
 
-      {/* DÜZENLEME İÇİN MODAL POP-UP */}
       {isModalOpen && (
         <div style={{
           position: 'fixed',
@@ -748,12 +754,17 @@ function ViaPlotinAdmin({ password }) {
 
   async function load() {
     setLoading(true);
-    const res = await fetch('/api/admin/via-plotin', { headers: authHeaders(password) });
-    if (res.ok) {
-      const data = await res.json();
-      setPosts(Array.isArray(data) ? data : []);
+    try {
+      const res = await fetch('/api/admin/via-plotin', { headers: authHeaders(password) });
+      if (res.ok) {
+        const data = await res.json();
+        setPosts(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      console.error('Yazılar yüklenirken hata oluştu:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   useEffect(() => { load(); }, []); // eslint-disable-line
@@ -877,6 +888,7 @@ function SiteSettingsAdmin({ password }) {
           hero_image_caption: d?.hero_image_caption || '',
         })
       )
+      .catch((err) => console.error(err))
       .finally(() => setLoading(false));
   }, []); // eslint-disable-line
 
@@ -943,6 +955,7 @@ function ContactAdmin({ password }) {
     fetch('/api/admin/contact', { headers: authHeaders(password) })
       .then((r) => r.json())
       .then((d) => setForm({ email: d?.email || '', telefon: d?.telefon || '', sehir: d?.sehir || '' }))
+      .catch((err) => console.error(err))
       .finally(() => setLoading(false));
   }, []); // eslint-disable-line
 
