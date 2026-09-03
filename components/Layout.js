@@ -5,11 +5,11 @@ import { useEffect, useState } from 'react';
 const NAV_ITEMS = [
   { href: '/', label: 'Ana Sayfa' },
   { href: '/kutuphane', label: 'Kütüphane' },
-  { href: '/via-platon', label: 'Via Platon' },
+  { href: '/via-plotin', label: 'Via Plotin' },
   { href: '/iletisim', label: 'İletişim' },
 ];
 
-const THEME_KEY = 'platon-theme';
+const THEME_KEY = 'plotinus-theme';
 
 export default function Layout({ children }) {
   const router = useRouter();
@@ -37,7 +37,7 @@ export default function Layout({ children }) {
       <nav className="nav">
         <div className="nav-inner">
           <Link href="/" className="brand">
-            <em>Platon</em> Kütüphanesi
+            <em>Plotinos</em> Kütüphanesi
           </Link>
           <div className="nav-links" style={{ alignItems: 'center' }}>
             {NAV_ITEMS.map((item) => (
@@ -74,7 +74,7 @@ export default function Layout({ children }) {
       </nav>
       <main>{children}</main>
       <footer className="footer">
-        Γνῶθι σεαυτόν — Kendini Bil · Platon Kütüphanesi © {new Date().getFullYear()}
+        Ἓν καὶ Πᾶν — Bir ve Tümü · Plotinos Kütüphanesi © {new Date().getFullYear()}
       </footer>
     </>
   );
