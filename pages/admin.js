@@ -30,48 +30,201 @@ const TIP_OPTIONS = [
 
 const TIP_FIELD_CONFIG = {
   'Kitap': {
-    cevirmen: true,
-    editor: { label: 'Editör / Hazırlayan / Müdekkik' },
-    yayinevi: { label: 'Yayınevi' },
-    baski: true,
+    // Kitabın farklı bir dile çevrilmiş olması durumunda
+    cevirmen: {
+      label: 'Çevirmen',
+      placeholder: 'Örn: Ahmet Yılmaz',
+    },
+
+    // Editör, hazırlayan, neşreden veya müdekkik
+    editor: {
+      label: 'Editör / Hazırlayan / Neşreden / Müdekkik',
+      placeholder: 'Örn: Mehmet Özdemir',
+    },
+
+    // Yayın bilgileri
+    yayin_yeri: {
+      label: 'Yayın Yeri',
+      placeholder: 'Örn: İstanbul',
+    },
+
+    yayinevi: {
+      label: 'Yayınevi',
+      placeholder: 'Örn: İletişim Yayınları',
+    },
+
+    baski: {
+      label: 'Baskı',
+      placeholder: 'Örn: 3',
+    },
   },
+
   'Kitap Bölümü': {
-    cevirmen: true,
-    editor: { label: 'Editör / Hazırlayan / Müdekkik' },
-    kaynak_adi: { label: 'Kitap Adı' },
-    baski: true,
+    // Bölüm başka bir dilden çevrilmiş olabilir
+    cevirmen: {
+      label: 'Çevirmen',
+      placeholder: 'Örn: Ali Dere',
+    },
+
+    // Bölümün bulunduğu kitabın editörü
+    editor: {
+      label: 'Editör / Hazırlayan / Neşreden / Müdekkik',
+      placeholder: 'Örn: Sönmez Kutlu',
+    },
+
+    // Bölümün bulunduğu kitabın adı
+    kaynak_adi: {
+      label: 'Kitap Adı',
+      placeholder: 'Örn: İmam Mâturîdî ve Mâturidilik',
+    },
+
+    yayin_yeri: {
+      label: 'Yayın Yeri',
+      placeholder: 'Örn: Ankara',
+    },
+
+    yayinevi: {
+      label: 'Yayınevi',
+      placeholder: 'Örn: Kitâbiyât Yayınları',
+    },
+
+    baski: {
+      label: 'Baskı',
+      placeholder: 'Örn: 2',
+    },
+
+    // Kitap bölümünde mutlaka önemli
+    sayfa_araligi: {
+      label: 'Sayfa Aralığı',
+      placeholder: 'Örn: 295-304',
+    },
   },
+
   'Makale': {
-    cevirmen: true,
-    kaynak_adi: { label: 'Dergi Adı', placeholder: 'Örn: Nazariyat' },
-    cilt: { label: 'Cilt' },
-    sayi: { label: 'Sayı' },
-    sayfa_araligi: { label: 'Sayfa Aralığı', placeholder: 'Örn: 55-78' },
+    // Çeviri makalelerde kullanılacak.
+    // Normal makalede boş bırakılabilir.
+    cevirmen: {
+      label: 'Çevirmen',
+      placeholder: 'Örn: Veysel Kasar',
+    },
+
+    kaynak_adi: {
+      label: 'Dergi Adı',
+      placeholder: 'Örn: Nazariyat',
+    },
+
+    cilt: {
+      label: 'Cilt',
+      placeholder: 'Örn: 5',
+    },
+
+    sayi: {
+      label: 'Sayı',
+      placeholder: 'Örn: 3',
+    },
+
+    sayfa_araligi: {
+      label: 'Sayfa Aralığı',
+      placeholder: 'Örn: 175-193',
+    },
   },
+
   'Yüksek Lisans Tezi': {
-    universite: { label: 'Üniversite', placeholder: 'Örn: Marmara Üniversitesi' },
-    enstitu: { label: 'Enstitü / Anabilim Dalı', placeholder: 'Örn: Sosyal Bilimler Enstitüsü' },
-    yayin_yeri: { label: 'Şehir', placeholder: 'Örn: İstanbul' },
+    universite: {
+      label: 'Üniversite',
+      placeholder: 'Örn: Cumhuriyet Üniversitesi',
+    },
+
+    enstitu: {
+      label: 'Enstitü / Anabilim Dalı',
+      placeholder: 'Örn: Sosyal Bilimler Enstitüsü',
+    },
+
+    yayin_yeri: {
+      label: 'Şehir',
+      placeholder: 'Örn: Sivas',
+    },
   },
+
   'Doktora Tezi': {
-    universite: { label: 'Üniversite' },
-    enstitu: { label: 'Enstitü / Anabilim Dalı' },
-    yayin_yeri: { label: 'Şehir' },
+    universite: {
+      label: 'Üniversite',
+      placeholder: 'Örn: Cumhuriyet Üniversitesi',
+    },
+
+    enstitu: {
+      label: 'Enstitü / Anabilim Dalı',
+      placeholder: 'Örn: Sosyal Bilimler Enstitüsü',
+    },
+
+    yayin_yeri: {
+      label: 'Şehir',
+      placeholder: 'Örn: Sivas',
+    },
   },
+
   'Ansiklopedi Maddesi': {
-    editor: { label: 'Editör' },
-    kaynak_adi: { label: 'Ansiklopedi Adı', placeholder: 'Örn: TDV İslâm Ansiklopedisi' },
-    yayinevi: { label: 'Yayınevi', placeholder: 'Örn: TDV Yayınları' },
-    yayin_yeri: { label: 'Yayın Yeri', placeholder: 'Örn: İstanbul' },
-    cilt: { label: 'Cilt', placeholder: 'Örn: c. 18' },
-    sayfa_araligi: { label: 'Sayfa Aralığı', placeholder: 'Örn: 12-15' },
+    editor: {
+      label: 'Editör',
+      placeholder: 'Örn: Komisyon',
+    },
+
+    kaynak_adi: {
+      label: 'Ansiklopedi Adı',
+      placeholder: 'Örn: TDV İslâm Ansiklopedisi',
+    },
+
+    yayinevi: {
+      label: 'Yayınevi',
+      placeholder: 'Örn: TDV Yayınları',
+    },
+
+    yayin_yeri: {
+      label: 'Yayın Yeri',
+      placeholder: 'Örn: İstanbul',
+    },
+
+    cilt: {
+      label: 'Cilt',
+      placeholder: 'Örn: 18',
+    },
+
+    sayfa_araligi: {
+      label: 'Sayfa Aralığı',
+      placeholder: 'Örn: 12-15',
+    },
   },
+
   'Bildiri/Tebliğ': {
-    editor: { label: 'Editör / Hazırlayan (varsa)' },
-    kaynak_adi: { label: 'Bildiri Kitabı / Kongre Adı' },
-    yayinevi: { label: 'Yayınevi' },
-    yayin_yeri: { label: 'Yayın Yeri' },
-    sayfa_araligi: { label: 'Sayfa Aralığı' },
+    editor: {
+      label: 'Editör / Hazırlayan',
+      placeholder: 'Örn: Cengiz Çuhadar vd.',
+    },
+
+    kaynak_adi: {
+      label: 'Bildiri Kitabı / Kongre Adı',
+      placeholder: 'Örn: IV. Uluslararası Şeyh Şa’ban-ı Velî Sempozyumu',
+    },
+
+    yayin_yeri: {
+      label: 'Yayın Yeri',
+      placeholder: 'Örn: Kastamonu',
+    },
+
+    yayinevi: {
+      label: 'Yayınevi',
+      placeholder: 'Örn: Kastamonu Üniversitesi Yayınları',
+    },
+
+    baski: {
+      label: 'Baskı',
+      placeholder: 'Örn: 1',
+    },
+
+    sayfa_araligi: {
+      label: 'Sayfa Aralığı',
+      placeholder: 'Örn: 643-658',
+    },
   },
 };
 
