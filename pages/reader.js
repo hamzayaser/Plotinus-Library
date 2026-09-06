@@ -1132,8 +1132,8 @@ export default function PlotinusReader() {
         }
 
         .rdr-translator-credit {
-          background: linear-gradient(135deg, #c5a059 0%, #b8923d 100%);
-          color: #121110;
+          background: var(--line, #2a2826);
+          color: var(--parchment, #faf8f5);
           padding: 16px 20px;
           border-radius: 8px;
           margin-bottom: 24px;
@@ -1142,7 +1142,8 @@ export default function PlotinusReader() {
           gap: 8px;
           font-size: 0.95rem;
           font-weight: 600;
-          box-shadow: 0 4px 12px rgba(197, 160, 89, 0.2);
+          border-left: 4px solid var(--gold-bright, #c5a059);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
 
         .rdr-translator-label {
@@ -1150,6 +1151,7 @@ export default function PlotinusReader() {
           font-size: 0.85rem;
           text-transform: uppercase;
           letter-spacing: 0.05em;
+          color: var(--gold-bright, #c5a059);
           opacity: 0.9;
         }
 
@@ -1157,13 +1159,15 @@ export default function PlotinusReader() {
           font-family: var(--font-display, serif);
           font-weight: 700;
           font-size: 1.1rem;
+          color: var(--parchment, #faf8f5);
         }
 
         .rdr-translator-year {
           font-family: var(--font-mono, monospace);
           font-size: 0.8rem;
-          opacity: 0.85;
+          opacity: 0.75;
           margin-left: auto;
+          color: #a09a90;
         }
 
         .rdr-toolbar {
@@ -1346,7 +1350,7 @@ export default function PlotinusReader() {
 
         .rdr-col-en {
           font-size: 1.02rem;
-          color: #d0cabc;
+          color: #3a3a3a;
           border-left: 1px solid var(--line, #2a2826);
           padding-left: 32px;
         }
