@@ -7,12 +7,12 @@ import { supabase } from '../lib/supabaseClient';
 // ============================================================
 
 const ENNEADS = [
-  { id: 'I', number: '1', label: 'Birinci Ennead' },
-  { id: 'II', number: '2', label: 'İkinci Ennead' },
-  { id: 'III', number: '3', label: 'Üçüncü Ennead' },
-  { id: 'IV', number: '4', label: 'Dördüncü Ennead' },
-  { id: 'V', number: '5', label: 'Beşinci Ennead' },
-  { id: 'VI', number: '6', label: 'Altıncı Ennead' },
+  { id: '1', number: '1', label: 'Birinci Ennead' },
+  { id: '2', number: '2', label: 'İkinci Ennead' },
+  { id: '3', number: '3', label: 'Üçüncü Ennead' },
+  { id: '4', number: '4', label: 'Dördüncü Ennead' },
+  { id: '5', number: '5', label: 'Beşinci Ennead' },
+  { id: '6', number: '6', label: 'Altıncı Ennead' },
 ];
 
 const PAGE_SIZE = 30;
