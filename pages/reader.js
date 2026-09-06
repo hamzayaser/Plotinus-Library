@@ -681,6 +681,14 @@ export default function PlotinusReader() {
 
             <div className="container-wide rdr-reading">
 
+              {/* ÇEVIRMEN KREDİSİ */}
+
+              <div className="rdr-translator-credit">
+                <span className="rdr-translator-label">Çevirmen:</span>
+                <span className="rdr-translator-name">Stephen MacKenna</span>
+                <span className="rdr-translator-year">(1917-1930 Enneades Tercümesi)</span>
+              </div>
+
               {/* TOOLBAR */}
 
               <div className="rdr-toolbar">
@@ -1123,6 +1131,41 @@ export default function PlotinusReader() {
           color: var(--gold-bright, #c5a059);
         }
 
+        .rdr-translator-credit {
+          background: linear-gradient(135deg, #c5a059 0%, #b8923d 100%);
+          color: #121110;
+          padding: 16px 20px;
+          border-radius: 8px;
+          margin-bottom: 24px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 0.95rem;
+          font-weight: 600;
+          box-shadow: 0 4px 12px rgba(197, 160, 89, 0.2);
+        }
+
+        .rdr-translator-label {
+          font-family: var(--font-mono, monospace);
+          font-size: 0.85rem;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          opacity: 0.9;
+        }
+
+        .rdr-translator-name {
+          font-family: var(--font-display, serif);
+          font-weight: 700;
+          font-size: 1.1rem;
+        }
+
+        .rdr-translator-year {
+          font-family: var(--font-mono, monospace);
+          font-size: 0.8rem;
+          opacity: 0.85;
+          margin-left: auto;
+        }
+
         .rdr-toolbar {
           display: flex;
           align-items: center;
@@ -1399,6 +1442,16 @@ export default function PlotinusReader() {
             padding-left: 0;
             border-top: 1px solid #2a2826;
             padding-top: 16px;
+          }
+
+          .rdr-translator-credit {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+          }
+
+          .rdr-translator-year {
+            margin-left: 0;
           }
 
           .rdr-toolbar-left {
