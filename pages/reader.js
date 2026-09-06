@@ -1350,9 +1350,14 @@ export default function PlotinusReader() {
 
         .rdr-col-en {
           font-size: 1.02rem;
-          color: #3a3a3a;
+          color: #d0cabc;
           border-left: 1px solid var(--line, #2a2826);
           padding-left: 32px;
+        }
+
+        /* AÇIK TEMADA İNGİLİZCE METİNİ SİYAH YAP */
+        [data-theme="light"] .rdr-col-en {
+          color: #2a2a2a;
         }
 
         .rdr-empty {
