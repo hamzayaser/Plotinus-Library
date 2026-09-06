@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { href: '/', label: 'Ana Sayfa' },
   { href: '/kutuphane', label: 'Kütüphane' },
   { href: '/via-plotin', label: 'Via Plotin' },
+  { href: '/reader', label: 'Plotinos Oku' }, // ← YENİ
   { href: '/iletisim', label: 'İletişim' },
 ];
 
