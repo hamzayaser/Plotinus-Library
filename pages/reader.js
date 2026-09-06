@@ -4,9 +4,6 @@ import { supabase } from '../lib/supabaseClient';
 
 // ============================================================
 // PLOTINUS ENNEADS
-// Veritabanı şeması:
-// id, author, work, greek_text, english_text,
-// reference, sort_order, translator
 // ============================================================
 
 const ENNEADS = [
@@ -21,60 +18,54 @@ const ENNEADS = [
 const PAGE_SIZE = 30;
 
 // ============================================================
-// YARDIMCI FONKSİYONLAR
+// REFERENCE YARDIMCILARI
+// Örnek:
+// 1.1.1  → Ennead 1 / Traktat 1 / Section 1
+// 6.9.11 → Ennead 6 / Traktat 9 / Section 11
 // ============================================================
 
-// reference:
-// 1.1.1
-// 1.1.2
-// 6.9.11
-//
-// → Ennead = ilk sayı
-// → Traktat = ikinci sayı
-// → Section = üçüncü sayı
-
-function getTractateNumber(reference) {
+function parseReference(reference) {
   if (!reference) return null;
 
-  const parts = reference.split('.');
+  const parts = String(reference).split('.');
 
-  if (parts.length < 2) return null;
+  if (parts.length !== 3) return null;
 
-  return parts[1];
+  return {
+    ennead: parts[0],
+    tractate: parts[1],
+    section: parts[2],
+  };
 }
 
-function getSectionNumber(reference) {
-  if (!reference) return null;
-
-  const parts = reference.split('.');
-
-  if (parts.length < 3) return null;
-
-  return parts[2];
-}
+// ============================================================
+// ANA COMPONENT
+// ============================================================
 
 export default function PlotinusReader() {
-  // ============================================================
-  // NAVİGASYON STATE'LERİ
-  // ============================================================
+
+  // ==========================================================
+  // SEÇİMLER
+  // ==========================================================
 
   const [selectedEnnead, setSelectedEnnead] = useState(null);
   const [selectedTractate, setSelectedTractate] = useState(null);
   const [selectedSection, setSelectedSection] = useState(null);
 
-  // ============================================================
-  // VERİ STATE'LERİ
-  // ============================================================
+  // ==========================================================
+  // VERİ
+  // ==========================================================
 
+  const [allTexts, setAllTexts] = useState([]);
   const [tractates, setTractates] = useState([]);
   const [sections, setSections] = useState([]);
   const [passages, setPassages] = useState([]);
-  const [loading, setLoading] = useState(false);
 
-  // ============================================================
-  // ARAMA / ARAYÜZ
-  // ============================================================
+  // ==========================================================
+  // UI
+  // ==========================================================
 
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [showSectionGrid, setShowSectionGrid] = useState(false);
@@ -82,9 +73,9 @@ export default function PlotinusReader() {
 
   const topRef = useRef(null);
 
-  // ============================================================
+  // ==========================================================
   // SCROLL
-  // ============================================================
+  // ==========================================================
 
   useEffect(() => {
     const handleScroll = () => {
@@ -98,9 +89,55 @@ export default function PlotinusReader() {
     };
   }, []);
 
-  // ============================================================
-  // 1. ENNEAD SEÇİLDİĞİNDE TRAKTATLARI ÇEK
-  // ============================================================
+  // ==========================================================
+  // 1. SUPABASE'DEN PLOTINUS VERİLERİNİ BİR KEZ ÇEK
+  //
+  // Burada Ennead / traktat / section filtresi YOK.
+  // Çünkü veritabanında bunlara ait ayrı kolonlar yok.
+  //
+  // reference üzerinden her şeyi JavaScript tarafında
+  // ayırıyoruz.
+  // ==========================================================
+
+  useEffect(() => {
+    async function fetchAllTexts() {
+      setLoading(true);
+
+      const { data, error } = await supabase
+        .from('canonical_texts')
+        .select(
+          'id, author, work, reference, greek_text, english_text, translator, sort_order'
+        )
+        .eq('author', 'Plotinus')
+        .eq('work', 'Enneades')
+        .order('sort_order', { ascending: true });
+
+      if (error) {
+        console.error(
+          'Plotinus metinleri çekilemedi:',
+          error
+        );
+
+        setAllTexts([]);
+        setLoading(false);
+        return;
+      }
+
+      console.log(
+        'Plotinus verileri Supabase\'den çekildi:',
+        data?.length
+      );
+
+      setAllTexts(data || []);
+      setLoading(false);
+    }
+
+    fetchAllTexts();
+  }, []);
+
+  // ==========================================================
+  // 2. ENNEAD SEÇİLDİĞİNDE TRAKTATLARI OLUŞTUR
+  // ==========================================================
 
   useEffect(() => {
     if (!selectedEnnead) {
@@ -108,203 +145,289 @@ export default function PlotinusReader() {
       return;
     }
 
-    async function fetchTractates() {
-      setLoading(true);
+    const ennead = ENNEADS.find(
+      (item) => item.id === selectedEnnead
+    );
 
-      const ennead = ENNEADS.find(
-        (item) => item.id === selectedEnnead
-      );
-
-      if (!ennead) {
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('canonical_texts')
-        .select('reference, sort_order')
-        .eq('author', 'Plotinus')
-        .eq('work', 'Enneades')
-        .like('reference', `${ennead.number}.%`)
-        .order('sort_order', { ascending: true });
-
-      if (error) {
-        console.error('Traktatlar çekilemedi:', error);
-        setTractates([]);
-        setLoading(false);
-        return;
-      }
-
-      if (data) {
-        const uniqueTractates = [];
-        const seen = new Set();
-
-        data.forEach((item) => {
-          const tractateNumber = getTractateNumber(item.reference);
-
-          if (
-            tractateNumber &&
-            !seen.has(tractateNumber)
-          ) {
-            seen.add(tractateNumber);
-
-            uniqueTractates.push({
-              id: tractateNumber,
-              title: `${selectedEnnead}.${tractateNumber}`,
-            });
-          }
-        });
-
-        setTractates(uniqueTractates);
-      }
-
-      setLoading(false);
+    if (!ennead) {
+      setTractates([]);
+      return;
     }
 
-    fetchTractates();
-  }, [selectedEnnead]);
+    const enneadTexts = allTexts.filter((item) => {
+      const parsed = parseReference(item.reference);
 
-  // ============================================================
-  // 2. TRAKTAT SEÇİLDİĞİNDE SECTION'LARI ÇEK
-  // ============================================================
+      return (
+        parsed &&
+        parsed.ennead === ennead.number
+      );
+    });
+
+    const seen = new Set();
+    const uniqueTractates = [];
+
+    enneadTexts.forEach((item) => {
+      const parsed = parseReference(item.reference);
+
+      if (!parsed) return;
+
+      if (!seen.has(parsed.tractate)) {
+        seen.add(parsed.tractate);
+
+        uniqueTractates.push({
+          id: parsed.tractate,
+          title: `Traktat ${parsed.tractate}`,
+        });
+      }
+    });
+
+    uniqueTractates.sort(
+      (a, b) =>
+        Number(a.id) - Number(b.id)
+    );
+
+    console.log(
+      `Ennead ${selectedEnnead} traktatları:`,
+      uniqueTractates
+    );
+
+    setTractates(uniqueTractates);
+
+  }, [selectedEnnead, allTexts]);
+
+  // ==========================================================
+  // 3. TRAKTAT SEÇİLDİĞİNDE SECTION'LARI OLUŞTUR
+  // ==========================================================
 
   useEffect(() => {
-    if (!selectedTractate || !selectedEnnead) {
+    if (
+      !selectedEnnead ||
+      !selectedTractate
+    ) {
       setSections([]);
       return;
     }
 
-    async function fetchSections() {
-      setLoading(true);
+    const ennead = ENNEADS.find(
+      (item) => item.id === selectedEnnead
+    );
 
-      const ennead = ENNEADS.find(
-        (item) => item.id === selectedEnnead
-      );
-
-      if (!ennead) {
-        setLoading(false);
-        return;
-      }
-
-      const prefix = `${ennead.number}.${selectedTractate}.`;
-
-      const { data, error } = await supabase
-        .from('canonical_texts')
-        .select('reference, sort_order')
-        .eq('author', 'Plotinus')
-        .eq('work', 'Enneades')
-        .like('reference', `${prefix}%`)
-        .order('sort_order', { ascending: true });
-
-      if (error) {
-        console.error('Bölümler çekilemedi:', error);
-        setSections([]);
-        setLoading(false);
-        return;
-      }
-
-      if (data) {
-        const uniqueSections = [];
-        const seen = new Set();
-
-        data.forEach((item) => {
-          if (
-            item.reference &&
-            !seen.has(item.reference)
-          ) {
-            seen.add(item.reference);
-            uniqueSections.push(item.reference);
-          }
-        });
-
-        setSections(uniqueSections);
-      }
-
-      setLoading(false);
+    if (!ennead) {
+      setSections([]);
+      return;
     }
 
-    fetchSections();
-  }, [selectedEnnead, selectedTractate]);
+    const tractateTexts = allTexts.filter((item) => {
+      const parsed = parseReference(item.reference);
 
-  // ============================================================
-  // 3. TRAKTAT / SECTION METİNLERİNİ ÇEK
-  // ============================================================
+      return (
+        parsed &&
+        parsed.ennead === ennead.number &&
+        parsed.tractate === String(selectedTractate)
+      );
+    });
+
+    const uniqueSections = [];
+    const seen = new Set();
+
+    tractateTexts.forEach((item) => {
+      if (!item.reference) return;
+
+      if (!seen.has(item.reference)) {
+        seen.add(item.reference);
+        uniqueSections.push(item.reference);
+      }
+    });
+
+    uniqueSections.sort((a, b) => {
+      const pa = parseReference(a);
+      const pb = parseReference(b);
+
+      return (
+        Number(pa.section) -
+        Number(pb.section)
+      );
+    });
+
+    console.log(
+      `${selectedEnnead}.${selectedTractate} sections:`,
+      uniqueSections
+    );
+
+    setSections(uniqueSections);
+
+  }, [
+    selectedEnnead,
+    selectedTractate,
+    allTexts,
+  ]);
+
+  // ==========================================================
+  // 4. SECTION SEÇİLDİĞİNDE SADECE O SECTION'I GÖSTER
+  // ==========================================================
 
   useEffect(() => {
-    if (!selectedTractate || !selectedEnnead) {
+    if (
+      !selectedEnnead ||
+      !selectedTractate ||
+      !selectedSection
+    ) {
       setPassages([]);
       return;
     }
 
-    async function fetchPassages() {
-      setLoading(true);
+    const result = allTexts.filter(
+      (item) =>
+        item.reference === selectedSection
+    );
 
-      const ennead = ENNEADS.find(
-        (item) => item.id === selectedEnnead
-      );
+    console.log(
+      `Seçilen section ${selectedSection}:`,
+      result
+    );
 
-      if (!ennead) {
-        setLoading(false);
-        return;
-      }
+    setPassages(result);
+    setCurrentPage(1);
+    setSearchQuery('');
 
-      const prefix = `${ennead.number}.${selectedTractate}.`;
-
-      let query = supabase
-        .from('canonical_texts')
-        .select('*')
-        .eq('author', 'Plotinus')
-        .eq('work', 'Enneades')
-        .like('reference', `${prefix}%`)
-        .order('sort_order', { ascending: true });
-
-      // Eğer belirli bir section seçilmişse
-      // sadece o reference alınır.
-      if (selectedSection) {
-        query = query.eq('reference', selectedSection);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('Metin çekme hatası:', error);
-        setPassages([]);
-        setLoading(false);
-        return;
-      }
-
-      setPassages(data || []);
-      setLoading(false);
-      setCurrentPage(1);
-      setSearchQuery('');
-    }
-
-    fetchPassages();
   }, [
     selectedEnnead,
     selectedTractate,
     selectedSection,
+    allTexts,
   ]);
 
-  // ============================================================
+  // ==========================================================
   // RESET
-  // ============================================================
+  // ==========================================================
 
   const resetAll = () => {
     setSelectedEnnead(null);
     setSelectedTractate(null);
     setSelectedSection(null);
-    setPassages([]);
-    setSections([]);
+
     setTractates([]);
+    setSections([]);
+    setPassages([]);
+
     setSearchQuery('');
     setCurrentPage(1);
     setShowSectionGrid(false);
   };
 
-  // ============================================================
-  // SCROLL TOP
-  // ============================================================
+  // ==========================================================
+  // ENNEAD GERİ
+  // ==========================================================
+
+  const handleBackToEnneads = () => {
+    resetAll();
+  };
+
+  // ==========================================================
+  // TRAKTATLARA GERİ
+  // ==========================================================
+
+  const handleBackToTractates = () => {
+    setSelectedTractate(null);
+    setSelectedSection(null);
+
+    setSections([]);
+    setPassages([]);
+
+    setSearchQuery('');
+    setCurrentPage(1);
+    setShowSectionGrid(false);
+  };
+
+  // ==========================================================
+  // SECTION'LARA GERİ
+  // ==========================================================
+
+  const handleBackToSections = () => {
+    setSelectedSection(null);
+    setPassages([]);
+
+    setSearchQuery('');
+    setCurrentPage(1);
+    setShowSectionGrid(false);
+  };
+
+  // ==========================================================
+  // SECTION SEÇ
+  // ==========================================================
+
+  const handleSectionClick = (reference) => {
+    setSelectedSection(reference);
+    setShowSectionGrid(false);
+    setSearchQuery('');
+    setCurrentPage(1);
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    });
+  };
+
+  // ==========================================================
+  // ARAMA
+  // ==========================================================
+
+  const filteredPassages = passages.filter(
+    (item) => {
+
+      if (!searchQuery.trim()) {
+        return true;
+      }
+
+      const q =
+        searchQuery
+          .trim()
+          .toLowerCase();
+
+      return (
+        String(item.reference || '')
+          .toLowerCase()
+          .includes(q) ||
+
+        String(item.greek_text || '')
+          .toLowerCase()
+          .includes(q) ||
+
+        String(item.english_text || '')
+          .toLowerCase()
+          .includes(q)
+      );
+    }
+  );
+
+  // ==========================================================
+  // SAYFALAMA
+  // ==========================================================
+
+  const totalPages = Math.ceil(
+    filteredPassages.length /
+      PAGE_SIZE
+  );
+
+  const currentPassages =
+    filteredPassages.slice(
+      (currentPage - 1) *
+        PAGE_SIZE,
+      currentPage * PAGE_SIZE
+    );
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    });
+  };
+
+  // ==========================================================
+  // YUKARI
+  // ==========================================================
 
   const scrollToTop = () => {
     window.scrollTo({
@@ -313,118 +436,82 @@ export default function PlotinusReader() {
     });
   };
 
-  // ============================================================
-  // ARAMA
-  // ============================================================
-
-  const filteredPassages = passages.filter((p) => {
-    if (!searchQuery.trim()) return true;
-
-    const q = searchQuery.toLowerCase();
-
-    return (
-      (p.reference &&
-        p.reference.toLowerCase().includes(q)) ||
-      (p.english_text &&
-        p.english_text.toLowerCase().includes(q)) ||
-      (p.greek_text &&
-        p.greek_text.toLowerCase().includes(q))
-    );
-  });
-
-  const totalPages = Math.ceil(
-    filteredPassages.length / PAGE_SIZE
-  );
-
-  const currentPassages = filteredPassages.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE
-  );
-
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-    scrollToTop();
-  };
-
-  // ============================================================
-  // SECTION CLICK
-  // ============================================================
-
-  const handleSectionClick = (ref) => {
-    setSelectedSection(ref);
-    setShowSectionGrid(false);
-  };
-
-  // ============================================================
-  // TRAKTAT GERİ
-  // ============================================================
-
-  const handleBackToTractates = () => {
-    setSelectedTractate(null);
-    setSelectedSection(null);
-    setPassages([]);
-    setSections([]);
-    setSearchQuery('');
-    setCurrentPage(1);
-    setShowSectionGrid(false);
-  };
-
-  // ============================================================
-  // SECTION GERİ
-  // ============================================================
-
-  const handleBackToSections = () => {
-    setSelectedSection(null);
-    setPassages([]);
-    setSearchQuery('');
-    setCurrentPage(1);
-    setShowSectionGrid(false);
-  };
-
-  // ============================================================
+  // ==========================================================
   // RENDER
-  // ============================================================
+  // ==========================================================
 
   return (
     <Layout>
-      <div className="rdr-page" ref={topRef}>
+
+      <div
+        className="rdr-page"
+        ref={topRef}
+      >
 
         {/* ====================================================
             ENNEAD SEÇİMİ
         ==================================================== */}
 
         {!selectedEnnead && (
+
           <div className="container rdr-select">
 
             <h1 className="rdr-title">
-              Okumak istediğiniz <em>bölümü</em> seçiniz
+              Okumak istediğiniz{' '}
+              <em>bölümü</em> seçiniz
             </h1>
 
             <div className="rdr-subtitle">
               Plotinus — Enneades
             </div>
 
-            <div className="rdr-grid-enneads">
-              {ENNEADS.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    setSelectedEnnead(item.id);
-                    setSelectedTractate(null);
-                    setSelectedSection(null);
-                  }}
-                  className="rdr-ennead-card"
-                >
-                  <span className="rdr-ennead-num">
-                    {item.id}
-                  </span>
+            {loading ? (
 
-                  <span className="rdr-ennead-label">
-                    {item.label}
-                  </span>
-                </button>
-              ))}
-            </div>
+              <div className="rdr-loading">
+                Metinler yükleniyor...
+              </div>
+
+            ) : (
+
+              <div className="rdr-grid-enneads">
+
+                {ENNEADS.map((item) => (
+
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setSelectedEnnead(
+                        item.id
+                      );
+
+                      setSelectedTractate(
+                        null
+                      );
+
+                      setSelectedSection(
+                        null
+                      );
+
+                      setPassages([]);
+                    }}
+                    className="rdr-ennead-card"
+                  >
+
+                    <span className="rdr-ennead-num">
+                      {item.id}
+                    </span>
+
+                    <span className="rdr-ennead-label">
+                      {item.label}
+                    </span>
+
+                  </button>
+
+                ))}
+
+              </div>
+
+            )}
 
           </div>
         )}
@@ -435,12 +522,15 @@ export default function PlotinusReader() {
 
         {selectedEnnead &&
           !selectedTractate && (
+
             <div className="container rdr-select">
 
               <div className="rdr-nav-header">
 
                 <button
-                  onClick={resetAll}
+                  onClick={
+                    handleBackToEnneads
+                  }
                   className="rdr-back"
                 >
                   ‹ Ennead Listesi
@@ -454,43 +544,63 @@ export default function PlotinusReader() {
               </div>
 
               {loading ? (
+
                 <div className="rdr-loading">
-                  Traktatlar yükleniyor...
+                  Metinler yükleniyor...
                 </div>
-              ) : (
+
+              ) : tractates.length > 0 ? (
+
                 <div className="rdr-index">
 
-                  {tractates.length > 0 ? (
-                    tractates.map((item) => (
+                  {tractates.map(
+                    (item) => (
+
                       <button
                         key={item.id}
                         onClick={() => {
-                          setSelectedTractate(item.id);
-                          setSelectedSection(null);
+                          setSelectedTractate(
+                            item.id
+                          );
+
+                          setSelectedSection(
+                            null
+                          );
+
                           setPassages([]);
+
                           setSearchQuery('');
-                          setCurrentPage(1);
+
+                          setCurrentPage(
+                            1
+                          );
                         }}
                         className="rdr-index-row"
                       >
 
                         <span className="rdr-index-num">
-                          {selectedEnnead}.{item.id}
+                          {selectedEnnead}.
+                          {item.id}
                         </span>
 
                         <span className="rdr-index-name">
-                          Traktat {item.id}
+                          {item.title}
                         </span>
 
                       </button>
-                    ))
-                  ) : (
-                    <div className="rdr-loading">
-                      Bu Ennead için traktat bulunamadı.
-                    </div>
+
+                    )
                   )}
 
                 </div>
+
+              ) : (
+
+                <div className="rdr-loading">
+                  Bu Ennead için traktat
+                  bulunamadı.
+                </div>
+
               )}
 
             </div>
@@ -502,15 +612,16 @@ export default function PlotinusReader() {
 
         {selectedEnnead &&
           selectedTractate &&
-          !selectedSection &&
-          passages.length === 0 && (
+          !selectedSection && (
 
             <div className="container rdr-select">
 
               <div className="rdr-nav-header">
 
                 <button
-                  onClick={handleBackToTractates}
+                  onClick={
+                    handleBackToTractates
+                  }
                   className="rdr-back"
                 >
                   ‹ Traktat Listesi
@@ -524,32 +635,37 @@ export default function PlotinusReader() {
 
               </div>
 
-              {loading ? (
-                <div className="rdr-loading">
-                  Bölümler yükleniyor...
-                </div>
-              ) : (
+              {sections.length > 0 ? (
+
                 <div className="rdr-section-list">
 
-                  {sections.length > 0 ? (
-                    sections.map((secRef) => (
+                  {sections.map(
+                    (section) => (
+
                       <button
-                        key={secRef}
+                        key={section}
                         onClick={() =>
-                          handleSectionClick(secRef)
+                          handleSectionClick(
+                            section
+                          )
                         }
                         className="rdr-section-btn"
                       >
-                        {secRef}
+                        {section}
                       </button>
-                    ))
-                  ) : (
-                    <div className="rdr-loading">
-                      Bu traktat için bölüm bulunamadı.
-                    </div>
+
+                    )
                   )}
 
                 </div>
+
+              ) : (
+
+                <div className="rdr-loading">
+                  Bu traktat için bölüm
+                  bulunamadı.
+                </div>
+
               )}
 
             </div>
@@ -561,8 +677,7 @@ export default function PlotinusReader() {
 
         {selectedEnnead &&
           selectedTractate &&
-          (selectedSection ||
-            passages.length > 0) && (
+          selectedSection && (
 
             <div className="container-wide rdr-reading">
 
@@ -574,91 +689,84 @@ export default function PlotinusReader() {
 
                   <button
                     onClick={
-                      selectedSection
-                        ? handleBackToSections
-                        : handleBackToTractates
+                      handleBackToSections
                     }
                     className="rdr-back"
                   >
-                    ‹{' '}
-                    {selectedSection
-                      ? 'Bölüm Seçimi'
-                      : 'Traktat Seçimi'}
+                    ‹ Bölüm Seçimi
                   </button>
 
                   <div>
 
                     <h1 className="rdr-work-title">
-                      Ennead {selectedEnnead}.
-                      {selectedTractate}
-
-                      {selectedSection &&
-                        `.${getSectionNumber(
-                          selectedSection
-                        )}`}
+                      {selectedSection}
                     </h1>
 
                   </div>
 
                 </div>
 
-                {!loading && (
-                  <div className="rdr-toolbar-right">
+                <div className="rdr-toolbar-right">
 
-                    {sections.length > 0 && (
+                  {sections.length > 0 && (
+
+                    <button
+                      className={`rdr-btn-fihrist ${
+                        showSectionGrid
+                          ? 'active'
+                          : ''
+                      }`}
+                      onClick={() =>
+                        setShowSectionGrid(
+                          !showSectionGrid
+                        )
+                      }
+                    >
+                      Bölüm İndeksi
+                    </button>
+
+                  )}
+
+                  <div className="rdr-search-box">
+
+                    <input
+                      type="text"
+                      placeholder="Arama yapın..."
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(
+                          e.target.value
+                        );
+
+                        setCurrentPage(1);
+                      }}
+                    />
+
+                    {searchQuery && (
+
                       <button
-                        className={`rdr-btn-fihrist ${
-                          showSectionGrid
-                            ? 'active'
-                            : ''
-                        }`}
+                        className="rdr-search-clear"
                         onClick={() =>
-                          setShowSectionGrid(
-                            !showSectionGrid
-                          )
+                          setSearchQuery('')
                         }
                       >
-                        Bölüm İndeksi
+                        ✕
                       </button>
+
                     )}
 
-                    <div className="rdr-search-box">
-
-                      <input
-                        type="text"
-                        placeholder="Arama yapın..."
-                        value={searchQuery}
-                        onChange={(e) => {
-                          setSearchQuery(
-                            e.target.value
-                          );
-                          setCurrentPage(1);
-                        }}
-                      />
-
-                      {searchQuery && (
-                        <button
-                          className="rdr-search-clear"
-                          onClick={() =>
-                            setSearchQuery('')
-                          }
-                        >
-                          ✕
-                        </button>
-                      )}
-
-                    </div>
-
                   </div>
-                )}
+
+                </div>
 
               </div>
 
               {/* =================================================
-                  HIZLI SECTION İNDEKSİ
+                  SECTION İNDEKSİ
               ================================================= */}
 
               {showSectionGrid && (
+
                 <div className="rdr-stephanus-grid">
 
                   <div className="rdr-grid-title">
@@ -667,64 +775,52 @@ export default function PlotinusReader() {
 
                   <div className="rdr-grid-items">
 
-                    {sections.map((secRef) => (
-                      <button
-                        key={secRef}
-                        className={`rdr-grid-chip ${
-                          selectedSection === secRef
-                            ? 'active'
-                            : ''
-                        }`}
-                        onClick={() =>
-                          handleSectionClick(secRef)
-                        }
-                      >
-                        {secRef}
-                      </button>
-                    ))}
+                    {sections.map(
+                      (section) => (
+
+                        <button
+                          key={section}
+                          className={`rdr-grid-chip ${
+                            selectedSection ===
+                            section
+                              ? 'active'
+                              : ''
+                          }`}
+                          onClick={() =>
+                            handleSectionClick(
+                              section
+                            )
+                          }
+                        >
+                          {section}
+                        </button>
+
+                      )
+                    )}
 
                   </div>
 
                 </div>
               )}
-
-              {/* LOADING */}
-
-              {loading && (
-                <div className="rdr-loading">
-                  Plotinus metinleri getiriliyor…
-                </div>
-              )}
-
-              {/* BOŞ */}
-
-              {!loading &&
-                passages.length === 0 && (
-                  <div className="rdr-loading">
-                    Bu bölüm için henüz metin
-                    bulunmamaktadır.
-                  </div>
-                )}
-
-              {!loading &&
-                filteredPassages.length === 0 &&
-                passages.length > 0 && (
-                  <div className="rdr-loading">
-                    Aradığınız kriterlere uygun pasaj
-                    bulunamadı.
-                  </div>
-                )}
 
               {/* =================================================
-                  METİNLER
+                  METİN
               ================================================= */}
 
-              {!loading &&
-                currentPassages.length > 0 && (
+              {filteredPassages.length ===
+                0 ? (
 
-                  <div className="rdr-book">
+                <div className="rdr-loading">
+                  Bu bölüm için metin
+                  bulunamadı.
+                </div>
 
-                    {currentPassages.map((item) => (
+              ) : (
+
+                <div className="rdr-book">
+
+                  {currentPassages.map(
+                    (item) => (
 
                       <div
                         className="rdr-book-row"
@@ -768,7 +864,8 @@ export default function PlotinusReader() {
                             item.english_text
                           ) : (
                             <span className="rdr-empty">
-                              English translation unavailable.
+                              English translation
+                              unavailable.
                             </span>
                           )}
 
@@ -776,73 +873,79 @@ export default function PlotinusReader() {
 
                       </div>
 
-                    ))}
+                    )
+                  )}
 
-                  </div>
-
-                )}
+                </div>
+              )}
 
               {/* =================================================
                   SAYFALAMA
               ================================================= */}
 
-              {!loading &&
-                totalPages > 1 && (
+              {totalPages > 1 && (
 
-                  <div className="rdr-pagination">
+                <div className="rdr-pagination">
 
-                    <button
-                      disabled={currentPage === 1}
-                      onClick={() =>
-                        handlePageChange(
-                          currentPage - 1
-                        )
-                      }
-                      className="rdr-page-btn"
-                    >
-                      ‹ Önceki
-                    </button>
+                  <button
+                    disabled={
+                      currentPage === 1
+                    }
+                    onClick={() =>
+                      handlePageChange(
+                        currentPage - 1
+                      )
+                    }
+                    className="rdr-page-btn"
+                  >
+                    ‹ Önceki
+                  </button>
 
-                    {Array.from(
-                      {
-                        length: totalPages,
-                      },
-                      (_, i) => i + 1
-                    ).map((pageNum) => (
+                  {Array.from(
+                    {
+                      length: totalPages,
+                    },
+                    (_, i) => i + 1
+                  ).map(
+                    (pageNum) => (
 
                       <button
                         key={pageNum}
                         className={`rdr-page-num ${
-                          pageNum === currentPage
+                          pageNum ===
+                          currentPage
                             ? 'active'
                             : ''
                         }`}
                         onClick={() =>
-                          handlePageChange(pageNum)
+                          handlePageChange(
+                            pageNum
+                          )
                         }
                       >
                         {pageNum}
                       </button>
 
-                    ))}
+                    )
+                  )}
 
-                    <button
-                      disabled={
-                        currentPage === totalPages
-                      }
-                      onClick={() =>
-                        handlePageChange(
-                          currentPage + 1
-                        )
-                      }
-                      className="rdr-page-btn"
-                    >
-                      Sonraki ›
-                    </button>
+                  <button
+                    disabled={
+                      currentPage ===
+                      totalPages
+                    }
+                    onClick={() =>
+                      handlePageChange(
+                        currentPage + 1
+                      )
+                    }
+                    className="rdr-page-btn"
+                  >
+                    Sonraki ›
+                  </button>
 
-                  </div>
-
-                )}
+                </div>
+              )}
 
             </div>
           )}
@@ -852,6 +955,7 @@ export default function PlotinusReader() {
         ==================================================== */}
 
         {showScrollTop && (
+
           <button
             className="rdr-scroll-top"
             onClick={scrollToTop}
@@ -859,6 +963,7 @@ export default function PlotinusReader() {
           >
             ↑
           </button>
+
         )}
 
       </div>
@@ -1179,6 +1284,7 @@ export default function PlotinusReader() {
         .rdr-col {
           line-height: 1.8;
           min-width: 0;
+          white-space: pre-wrap;
         }
 
         .rdr-lang-tag {
@@ -1322,6 +1428,7 @@ export default function PlotinusReader() {
         }
 
       `}</style>
+
     </Layout>
   );
 }
