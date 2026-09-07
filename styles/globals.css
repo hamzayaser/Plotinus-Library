@@ -3039,3 +3039,78 @@ html, body {
     width: 100vw;
   }
 }
+
+/* =========================================================
+   READER RENK TEMASI (tüm siteye uygula)
+   Bu blok en altta olduğu için üstteki tüm renkleri ezer.
+   ========================================================= */
+
+:root {
+  /* Dark mode – Reader mavimsi / lacivert */
+  --ink: #101415;
+  --ink-soft: #171d1e;
+  --parchment: #dde4e3;
+  --parchment-dim: #808b8a;
+
+  --gold: #4fb8c4;
+  --gold-bright: #82d2da;
+  --wine: #5c2a2a;
+
+  --line: rgba(221, 228, 227, 0.12);
+  --line-strong: rgba(221, 228, 227, 0.22);
+
+  --nav-bg: rgba(16, 20, 21, 0.92);
+
+  color-scheme: dark;
+}
+
+[data-theme='light'] {
+  /* Light mode – beyazımsı / soft */
+  --ink: #f4f7f7;
+  --ink-soft: #ffffff;
+  --parchment: #1a2222;
+  --parchment-dim: #5a6565;
+
+  --gold: #2a9d8f;
+  --gold-bright: #3bb5a6;
+  --wine: #7a3232;
+
+  --line: rgba(26, 34, 34, 0.10);
+  --line-strong: rgba(26, 34, 34, 0.18);
+
+  --nav-bg: rgba(244, 247, 247, 0.92);
+
+  color-scheme: light;
+}
+
+/* Açık temada emanation efektlerini de yeni renge uyumlu yap */
+[data-theme='light'] .emanation-ring,
+[data-theme='light'] .emanation-ring-inner,
+[data-theme='light'] .emanation-pulse,
+[data-theme='light'] .emanation-center-glow {
+  border-color: rgba(42, 157, 143, 0.35);
+  background: radial-gradient(circle, rgba(42, 157, 143, 0.08), transparent 70%);
+  mix-blend-mode: multiply;
+}
+
+[data-theme='light'] .emanation-core {
+  background: radial-gradient(circle at center, rgba(42, 157, 143, 0.22), rgba(244, 247, 247, 0.96) 66%);
+  border-color: rgba(42, 157, 143, 0.50);
+  box-shadow: 0 0 55px rgba(42, 157, 143, 0.28);
+}
+
+[data-theme='light'] .emanation-node-label span {
+  color: #1a2e2c;
+  text-shadow: 0 0 12px rgba(42, 157, 143, 0.35);
+}
+
+[data-theme='light'] .emanation-ray {
+  background: linear-gradient(to bottom, rgba(42, 157, 143, 0.45), transparent);
+  opacity: 0.55;
+}
+
+[data-theme='light'] .modern-badge {
+  background: rgba(42, 157, 143, 0.08);
+  border-color: rgba(42, 157, 143, 0.22);
+  color: #1a2e2c;
+}
