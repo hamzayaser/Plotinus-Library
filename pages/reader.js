@@ -16,6 +16,13 @@ const ENNEADS = [
 
 const PAGE_SIZE = 30;
 
+// Arama listesinden çıkarılacak önemsiz edat/zarf/bağlaçlar
+const STOP_WORDS = new Set([
+  'καί', 'δέ', 'τε', 'μή', 'οὐ', 'ὦ', 'γε', 'γάρ', 'μέν', 'δή', 'ἄν',
+  'με', 'σε', 'σου', 'μοι', 'τοι', 'πάντα', 'πάνυ', 'τότε', 'πάλιν',
+  'ὁ', 'ἡ', 'τό', 'οἱ', 'αἱ', 'τά', 'τοῦ', 'τῆς', 'τῷ', 'τῇ', 'τόν', 'τήν',
+]);
+
 // ============================================================
 // YARDIMCI FONKSİYONLAR
 // ============================================================
@@ -28,6 +35,15 @@ function parseReference(reference) {
     tractate: parts[1],
     section: parts[2],
   };
+}
+
+// Aksan temizleme fonksiyonu (lemma_key ile tam uyumlu)
+function stripAccents(str) {
+  if (!str) return '';
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
 }
 
 // ============================================================
@@ -62,6 +78,31 @@ export default function PlotinusReader() {
   const topRef = useRef(null);
 
   // ----------------------------------------------------------
+  // SÖZLÜK & YAN PANEL (Platon özelliklerinden uyarlandı)
+  // ----------------------------------------------------------
+  const [showLexicon, setShowLexicon] = useState(false);
+  const [lexiconSearch, setLexiconSearch] = useState('');
+  const [lexiconResults, setLexiconResults] = useState([]);
+  const [lexiconLoading, setLexiconLoading] = useState(false);
+
+  const [selectedLemma, setSelectedLemma] = useState(null);
+  const [workGroupedList, setWorkGroupedList] = useState([]);
+  const [selectedDialogueFilter, setSelectedDialogueFilter] = useState(null);
+  const [detailedOccurrences, setDetailedOccurrences] = useState([]);
+  const [lemmaLoading, setLemmaLoading] = useState(false);
+
+  // SAĞ YAN PANEL
+  const [activeSideWord, setActiveSideWord] = useState(null);
+  const [sideWorkGrouped, setSideWorkGrouped] = useState([]);
+  const [sideSelectedWork, setSideSelectedWork] = useState(null);
+  const [sideOccurrences, setSideOccurrences] = useState([]);
+  const [sideLoading, setSideLoading] = useState(false);
+
+  // Tıklanabilir kelimeler için geçerli lemma seti
+  const [validLemmasSet, setValidLemmasSet] = useState(new Set());
+  const [pendingScroll, setPendingScroll] = useState(null);
+
+  // ----------------------------------------------------------
   // DİL TERCİHİ (localStorage)
   // ----------------------------------------------------------
   useEffect(() => {
@@ -81,6 +122,22 @@ export default function PlotinusReader() {
     const handleScroll = () => setShowScrollTop(window.scrollY > 400);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // ----------------------------------------------------------
+  // GEÇERLİ LEMMALARI YÜKLE (tıklanabilirlik için)
+  // ----------------------------------------------------------
+  useEffect(() => {
+    async function loadValidLemmas() {
+      const { data, error } = await supabase
+        .from('lemma_counts')
+        .select('lemma_key');
+      if (!error && data) {
+        const keysSet = new Set(data.map((item) => item.lemma_key));
+        setValidLemmasSet(keysSet);
+      }
+    }
+    loadValidLemmas();
   }, []);
 
   // ----------------------------------------------------------
@@ -199,7 +256,6 @@ export default function PlotinusReader() {
       selectedSections.includes(item.reference)
     );
 
-    // Sıralı tut
     result.sort((a, b) => {
       const pa = parseReference(a.reference);
       const pb = parseReference(b.reference);
@@ -212,6 +268,22 @@ export default function PlotinusReader() {
     setCurrentPage(1);
     setSearchQuery('');
   }, [selectedSections, allTexts]);
+
+  // Pending scroll (sözlükten gelince)
+  useEffect(() => {
+    if (!pendingScroll || passages.length === 0) return;
+    const idx = passages.findIndex((p) => p.reference === pendingScroll);
+    if (idx !== -1) {
+      const targetPage = Math.floor(idx / PAGE_SIZE) + 1;
+      setCurrentPage(targetPage);
+      const refToScroll = pendingScroll;
+      setTimeout(() => {
+        const el = document.getElementById(`ref-${refToScroll}`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 150);
+    }
+    setPendingScroll(null);
+  }, [passages, pendingScroll]);
 
   // ----------------------------------------------------------
   // GLOBAL ARAMA SONUÇLARI
@@ -228,8 +300,237 @@ export default function PlotinusReader() {
           String(item.english_text || '').toLowerCase().includes(q)
         );
       })
-      .slice(0, 50); // performans için sınır
+      .slice(0, 50);
   }, [globalSearchQuery, allTexts]);
+
+  // ----------------------------------------------------------
+  // SAĞ PANEL MANTIĞI (Kelime tıklama)
+  // ----------------------------------------------------------
+  const handleWordClick = async (rawWord) => {
+    const cleanWord = rawWord.replace(/[.,·;!?()"'«»]/g, '').trim();
+    if (!cleanWord) return;
+
+    setActiveSideWord(cleanWord);
+    setSideSelectedWork(null);
+    setSideOccurrences([]);
+    setSideLoading(true);
+
+    const cleanKey = stripAccents(cleanWord);
+    const { data, error } = await supabase
+      .from('word_occurrences')
+      .select('work, occurrence_count')
+      .ilike('lemma_key', cleanKey)
+      .eq('work', 'Enneades');
+
+    if (error || !data) {
+      setSideWorkGrouped([]);
+    } else {
+      const groupMap = {};
+      data.forEach((row) => {
+        const w = row.work || 'Enneades';
+        groupMap[w] = (groupMap[w] || 0) + (row.occurrence_count || 1);
+      });
+      const grouped = Object.entries(groupMap)
+        .map(([work, count]) => ({ work, count }))
+        .sort((a, b) => b.count - a.count);
+      setSideWorkGrouped(grouped);
+    }
+    setSideLoading(false);
+  };
+
+  const handleSideWorkSelect = async (workName) => {
+    setSideSelectedWork(workName);
+    setSideLoading(true);
+    const cleanKey = stripAccents(activeSideWord);
+    const { data, error } = await supabase
+      .from('word_occurrences')
+      .select('work, section_ref, form, occurrence_count')
+      .eq('work', workName)
+      .ilike('lemma_key', cleanKey)
+      .order('section_ref', { ascending: true });
+
+    if (!error) {
+      // section_ref bazen "1.1.1, 1.8.15" gibi liste olabilir → düzleştir
+      const expanded = [];
+      (data || []).forEach((row) => {
+        const refs = String(row.section_ref || '')
+          .split(',')
+          .map((r) => r.trim())
+          .filter(Boolean);
+        refs.forEach((ref) => {
+          expanded.push({
+            ...row,
+            section_ref: ref,
+          });
+        });
+      });
+      setSideOccurrences(expanded);
+    }
+    setSideLoading(false);
+  };
+
+  const closeSidebar = () => {
+    setActiveSideWord(null);
+    setSideSelectedWork(null);
+  };
+
+  // Metin içindeki kelimeleri TIKLANABİLİR olarak işleyen render
+  const renderInteractiveGreek = (text) => {
+    if (!text) return null;
+    const tokens = text.split(/(\s+)/);
+    return tokens.map((token, i) => {
+      if (token.trim().length === 0) return token;
+      const cleaned = token.replace(/[.,·;!?()"'«»]/g, '').trim();
+      const key = stripAccents(cleaned);
+      const isValid = validLemmasSet.has(key);
+      if (isValid) {
+        return (
+          <span
+            key={i}
+            className="rdr-clickable-word"
+            onClick={() => handleWordClick(token)}
+            title="Sözlük ve geçişlerini göster"
+          >
+            {token}
+          </span>
+        );
+      }
+      return <span key={i}>{token}</span>;
+    });
+  };
+
+  // ----------------------------------------------------------
+  // PLOTINUS SÖZLÜĞÜ (Lexicon Modal)
+  // ----------------------------------------------------------
+  const openLexicon = () => {
+    setShowLexicon(true);
+    resetLemmaState();
+  };
+
+  const closeLexicon = () => {
+    setShowLexicon(false);
+    resetLemmaState();
+    setLexiconSearch('');
+  };
+
+  const resetLemmaState = () => {
+    setSelectedLemma(null);
+    setWorkGroupedList([]);
+    setSelectedDialogueFilter(null);
+    setDetailedOccurrences([]);
+  };
+
+  // 1. ANA KELİME LİSTESİ
+  useEffect(() => {
+    if (!showLexicon || selectedLemma) return;
+    async function fetchLexiconPage() {
+      setLexiconLoading(true);
+      let query = supabase
+        .from('lemma_counts')
+        .select('lemma, lemma_key, total_occurrences')
+        .order('total_occurrences', { ascending: false });
+
+      if (lexiconSearch.trim()) {
+        const cleanSearch = stripAccents(lexiconSearch.trim());
+        query = query.ilike('lemma_key', `%${cleanSearch}%`);
+      }
+
+      const { data, error } = await query.limit(1000);
+      if (error) {
+        console.error('Sözlük verisi çekme hatası:', error);
+        setLexiconResults([]);
+      } else {
+        const filtered = (data || []).filter((row) => {
+          if (!lexiconSearch.trim() && STOP_WORDS.has(row.lemma)) {
+            return false;
+          }
+          return true;
+        });
+        setLexiconResults(filtered);
+      }
+      setLexiconLoading(false);
+    }
+    fetchLexiconPage();
+  }, [showLexicon, selectedLemma, lexiconSearch]);
+
+  // 2. AŞAMA – lemma seçildiğinde (Enneades odaklı)
+  const selectLemma = async (item) => {
+    setSelectedLemma(item.lemma);
+    setSelectedDialogueFilter(null);
+    setLemmaLoading(true);
+    const cleanKey = stripAccents(item.lemma);
+    const { data, error } = await supabase
+      .from('word_occurrences')
+      .select('work, occurrence_count')
+      .eq('lemma_key', cleanKey)
+      .eq('work', 'Enneades');
+
+    if (error) {
+      console.error('Gruplama hatası:', error);
+      setWorkGroupedList([]);
+    } else {
+      const groupMap = {};
+      (data || []).forEach((row) => {
+        const w = row.work || 'Enneades';
+        const c = row.occurrence_count || 1;
+        groupMap[w] = (groupMap[w] || 0) + c;
+      });
+      const groupedArray = Object.entries(groupMap)
+        .map(([work, count]) => ({ work, count }))
+        .sort((a, b) => b.count - a.count);
+      setWorkGroupedList(groupedArray);
+    }
+    setLemmaLoading(false);
+  };
+
+  // 3. AŞAMA – pasaj detayları
+  const selectDialogue = async (work) => {
+    setSelectedDialogueFilter(work);
+    setLemmaLoading(true);
+    const cleanKey = stripAccents(selectedLemma);
+    const { data, error } = await supabase
+      .from('word_occurrences')
+      .select('work, section_ref, form, occurrence_count')
+      .eq('work', work)
+      .eq('lemma_key', cleanKey)
+      .order('section_ref', { ascending: true });
+
+    if (error) {
+      console.error('Pasaj detay hatası:', error);
+      setDetailedOccurrences([]);
+    } else {
+      // section_ref listelerini düzleştir
+      const expanded = [];
+      (data || []).forEach((row) => {
+        const refs = String(row.section_ref || '')
+          .split(',')
+          .map((r) => r.trim())
+          .filter(Boolean);
+        refs.forEach((ref) => {
+          expanded.push({
+            ...row,
+            section_ref: ref,
+          });
+        });
+      });
+      setDetailedOccurrences(expanded);
+    }
+    setLemmaLoading(false);
+  };
+
+  const goToOccurrence = (occ) => {
+    closeLexicon();
+    closeSidebar();
+    const parsed = parseReference(occ.section_ref);
+    if (!parsed) return;
+
+    setPendingScroll(occ.section_ref);
+    setSelectedEnnead(parsed.ennead);
+    setSelectedTractate(parsed.tractate);
+    setSelectedSections([occ.section_ref]);
+    setShowSectionGrid(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // ----------------------------------------------------------
   // NAVİGASYON
@@ -245,6 +546,7 @@ export default function PlotinusReader() {
     setGlobalSearchQuery('');
     setCurrentPage(1);
     setShowSectionGrid(false);
+    closeSidebar();
   };
 
   const handleBackToEnneads = () => resetAll();
@@ -257,6 +559,7 @@ export default function PlotinusReader() {
     setSearchQuery('');
     setCurrentPage(1);
     setShowSectionGrid(false);
+    closeSidebar();
   };
 
   const handleBackToSections = () => {
@@ -265,6 +568,7 @@ export default function PlotinusReader() {
     setSearchQuery('');
     setCurrentPage(1);
     setShowSectionGrid(false);
+    closeSidebar();
   };
 
   const toggleSection = (reference) => {
@@ -277,7 +581,6 @@ export default function PlotinusReader() {
   };
 
   const handleSectionClick = (reference) => {
-    // Tek tıklamada seç + oku (çoklu seçim için toggle)
     if (selectedSections.includes(reference) && selectedSections.length === 1) {
       // zaten tek seçiliyse değiştirme
     } else {
@@ -334,7 +637,14 @@ export default function PlotinusReader() {
   // ----------------------------------------------------------
   return (
     <Layout>
-      <div className="rdr-page" ref={topRef}>
+      <div className={`rdr-page ${activeSideWord ? 'sidebar-open' : ''}`} ref={topRef}>
+        {/* ÜST BAR – Sözlük butonu */}
+        <div className="container-wide rdr-lexicon-topbar">
+          <button className="rdr-btn-lexicon" onClick={openLexicon}>
+            📖 Plotinus Sözlüğü
+          </button>
+        </div>
+
         {/* ================================================== */}
         {/* GLOBAL ARAMA (Ennead seçilmeden önce) */}
         {/* ================================================== */}
@@ -501,7 +811,6 @@ export default function PlotinusReader() {
                     <button
                       className="rdr-btn-primary"
                       onClick={() => {
-                        // zaten selectedSections dolu, effect çalışacak
                         setShowSectionGrid(false);
                       }}
                     >
@@ -653,7 +962,7 @@ export default function PlotinusReader() {
                     {(readerLanguage === 'greek' || readerLanguage === 'both') && (
                       <div className="rdr-col rdr-col-gr">
                         <div className="rdr-lang-tag">ΕΛΛΗΝΙΚΑ</div>
-                        {item.greek_text || (
+                        {renderInteractiveGreek(item.greek_text) || (
                           <span className="rdr-empty">Metin yok.</span>
                         )}
                       </div>
@@ -708,6 +1017,185 @@ export default function PlotinusReader() {
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* SAĞDAN AÇILAN YAN PANEL (SIDEBAR) */}
+        {activeSideWord && (
+          <div className="rdr-sidebar">
+            <div className="rdr-sidebar-header">
+              <div>
+                <span className="rdr-sidebar-sub">Kelime İnceleme</span>
+                <h3 className="rdr-sidebar-title">{activeSideWord}</h3>
+              </div>
+              <button className="rdr-sidebar-close" onClick={closeSidebar}>
+                ✕
+              </button>
+            </div>
+            <div className="rdr-sidebar-content">
+              {sideLoading ? (
+                <div className="rdr-loading">Sözlük verileri çekiliyor…</div>
+              ) : (
+                <>
+                  {!sideSelectedWork && (
+                    <div className="rdr-sidebar-list">
+                      <div className="rdr-sidebar-info">Geçtiği Yerler:</div>
+                      {sideWorkGrouped.length === 0 ? (
+                        <div className="rdr-empty">Bu kelime için kayıt bulunamadı.</div>
+                      ) : (
+                        sideWorkGrouped.map((g) => (
+                          <button
+                            key={g.work}
+                            className="rdr-sidebar-item"
+                            onClick={() => handleSideWorkSelect(g.work)}
+                          >
+                            <span>{g.work}</span>
+                            <span className="rdr-chip">{g.count} geçiş</span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                  {sideSelectedWork && (
+                    <div className="rdr-sidebar-list">
+                      <button
+                        className="rdr-sidebar-back"
+                        onClick={() => setSideSelectedWork(null)}
+                      >
+                        ‹ Geri
+                      </button>
+                      <div className="rdr-sidebar-info">
+                        <strong>{sideSelectedWork}</strong> pasajları:
+                      </div>
+                      {sideOccurrences.map((occ, idx) => (
+                        <button
+                          key={idx}
+                          className="rdr-sidebar-item"
+                          onClick={() => goToOccurrence(occ)}
+                        >
+                          <span className="rdr-ref-tag">{occ.section_ref}</span>
+                          <span className="rdr-form-tag">({occ.form})</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* PLOTINUS SÖZLÜĞÜ MODALI */}
+        {showLexicon && (
+          <div className="rdr-lexicon-overlay" onClick={closeLexicon}>
+            <div className="rdr-lexicon-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="rdr-lexicon-header">
+                <h2 className="rdr-lexicon-title">
+                  {selectedLemma ? (
+                    <>
+                      <button className="rdr-lexicon-back" onClick={resetLemmaState}>
+                        ‹ Kelime Listesi
+                      </button>
+                      <span className="rdr-lexicon-lemma">{selectedLemma}</span>
+                    </>
+                  ) : (
+                    'Plotinus Sözlüğü'
+                  )}
+                </h2>
+                <button className="rdr-lexicon-close" onClick={closeLexicon}>
+                  ✕
+                </button>
+              </div>
+
+              {/* AŞAMA 1 */}
+              {!selectedLemma && (
+                <>
+                  <div className="rdr-lexicon-search">
+                    <input
+                      type="text"
+                      autoFocus
+                      placeholder="Kelime ara (örn: ψυχή, ἕν)..."
+                      value={lexiconSearch}
+                      onChange={(e) => setLexiconSearch(e.target.value)}
+                    />
+                  </div>
+                  {lexiconLoading ? (
+                    <div className="rdr-loading">Kelimeler yükleniyor…</div>
+                  ) : (
+                    <div className="rdr-lexicon-list">
+                      {lexiconResults.map((item) => (
+                        <button
+                          key={item.lemma}
+                          className="rdr-lexicon-row"
+                          onClick={() => selectLemma(item)}
+                        >
+                          <span className="rdr-lexicon-word">{item.lemma}</span>
+                          <span className="rdr-lexicon-count">{item.total_occurrences} geçiş</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* AŞAMA 2 */}
+              {selectedLemma && !selectedDialogueFilter && (
+                <>
+                  <div className="rdr-lexicon-summary">
+                    Geçtiği yerler (Lütfen seçin):
+                  </div>
+                  {lemmaLoading ? (
+                    <div className="rdr-loading">Hesaplanıyor…</div>
+                  ) : (
+                    <div className="rdr-lexicon-list">
+                      {workGroupedList.map((g) => (
+                        <button
+                          key={g.work}
+                          className="rdr-lexicon-row"
+                          onClick={() => selectDialogue(g.work)}
+                        >
+                          <span className="rdr-lexicon-occ-work">{g.work}</span>
+                          <span className="rdr-lexicon-count">{g.count} defa geçiyor</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* AŞAMA 3 */}
+              {selectedLemma && selectedDialogueFilter && (
+                <>
+                  <div className="rdr-lexicon-summary">
+                    <button
+                      className="rdr-lexicon-back"
+                      onClick={() => setSelectedDialogueFilter(null)}
+                    >
+                      ‹ Geri
+                    </button>
+                    <strong>{selectedDialogueFilter}</strong> içerisindeki geçişler:
+                  </div>
+                  {lemmaLoading ? (
+                    <div className="rdr-loading">Pasajlar yükleniyor…</div>
+                  ) : (
+                    <div className="rdr-lexicon-list">
+                      {detailedOccurrences.map((occ, i) => (
+                        <button
+                          key={`${occ.section_ref}-${i}`}
+                          className="rdr-lexicon-row rdr-lexicon-occ"
+                          onClick={() => goToOccurrence(occ)}
+                        >
+                          <span className="rdr-lexicon-occ-ref">{occ.section_ref}</span>
+                          <span className="rdr-lexicon-count">
+                            {occ.occurrence_count}× ({occ.form})
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         )}
 
@@ -771,6 +1259,11 @@ export default function PlotinusReader() {
           background-color: var(--page-bg);
           color: var(--text);
           min-height: 100vh;
+          transition: padding-right 0.3s ease;
+        }
+
+        .rdr-page.sidebar-open {
+          padding-right: 360px;
         }
 
         .rdr-select {
@@ -1353,6 +1846,281 @@ export default function PlotinusReader() {
           z-index: 50;
         }
 
+        /* TIKLANABİLİR KELİME */
+        .rdr-clickable-word {
+          cursor: pointer;
+          color: var(--accent-light);
+          border-bottom: 1px dotted rgba(79, 184, 196, 0.5);
+          transition: all 0.15s ease;
+          border-radius: 2px;
+          padding: 0 1px;
+        }
+
+        .rdr-clickable-word:hover {
+          background-color: rgba(79, 184, 196, 0.15);
+          border-bottom-color: var(--accent);
+        }
+
+        /* SAĞ PANEL (SIDEBAR) */
+        .rdr-sidebar {
+          position: fixed;
+          top: 0;
+          right: 0;
+          width: 350px;
+          height: 100vh;
+          background: var(--col-bg);
+          border-left: 1px solid var(--border);
+          box-shadow: -4px 0 20px rgba(0, 0, 0, 0.4);
+          z-index: 300;
+          display: flex;
+          flex-direction: column;
+          animation: slideIn 0.2s ease-out forwards;
+        }
+
+        @keyframes slideIn {
+          from { transform: translateX(100%); }
+          to { transform: translateX(0); }
+        }
+
+        .rdr-sidebar-header {
+          padding: 20px;
+          border-bottom: 1px solid var(--border);
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+        }
+
+        .rdr-sidebar-sub {
+          font-size: 0.75rem;
+          color: var(--accent);
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+        }
+
+        .rdr-sidebar-title {
+          font-family: var(--font-english);
+          font-size: 1.5rem;
+          margin: 4px 0 0;
+          color: var(--text);
+        }
+
+        .rdr-sidebar-close {
+          all: unset;
+          cursor: pointer;
+          color: var(--text-light);
+          font-size: 1.2rem;
+          padding: 4px;
+        }
+
+        .rdr-sidebar-content {
+          padding: 20px;
+          overflow-y: auto;
+          flex: 1;
+        }
+
+        .rdr-sidebar-info {
+          font-size: 0.85rem;
+          color: var(--text-light);
+          margin-bottom: 12px;
+        }
+
+        .rdr-sidebar-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .rdr-sidebar-item {
+          all: unset;
+          cursor: pointer;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 10px 12px;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid var(--border);
+          border-radius: 6px;
+          transition: all 0.2s ease;
+        }
+
+        .rdr-sidebar-item:hover {
+          border-color: var(--accent);
+          background: var(--greek-hover);
+        }
+
+        .rdr-chip {
+          font-size: 0.75rem;
+          background: rgba(79, 184, 196, 0.2);
+          color: var(--accent-light);
+          padding: 2px 8px;
+          border-radius: 99px;
+        }
+
+        .rdr-sidebar-back {
+          all: unset;
+          cursor: pointer;
+          color: var(--accent);
+          font-size: 0.85rem;
+          margin-bottom: 12px;
+        }
+
+        .rdr-ref-tag {
+          font-family: var(--font-ui);
+          color: var(--accent);
+          font-weight: bold;
+        }
+
+        .rdr-form-tag {
+          font-size: 0.8rem;
+          color: var(--text-light);
+        }
+
+        /* Sözlük topbar */
+        .rdr-lexicon-topbar {
+          display: flex;
+          justify-content: flex-end;
+          margin-bottom: 20px;
+          padding: 0 16px;
+        }
+
+        .rdr-btn-lexicon {
+          all: unset;
+          cursor: pointer;
+          padding: 9px 16px;
+          border-radius: 6px;
+          border: 1px solid var(--accent);
+          color: var(--accent);
+          font-family: var(--font-ui);
+          font-size: 0.9rem;
+          transition: all 0.2s;
+        }
+
+        .rdr-btn-lexicon:hover {
+          background: var(--greek-hover);
+        }
+
+        /* Lexicon Modal */
+        .rdr-lexicon-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.6);
+          display: flex;
+          align-items: flex-start;
+          justify-content: center;
+          padding: 6vh 16px;
+          z-index: 200;
+        }
+
+        .rdr-lexicon-modal {
+          background: var(--col-bg);
+          border: 1px solid var(--border);
+          border-radius: 12px;
+          width: 100%;
+          max-width: 640px;
+          max-height: 82vh;
+          display: flex;
+          flex-direction: column;
+          padding: 20px;
+        }
+
+        .rdr-lexicon-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 14px;
+        }
+
+        .rdr-lexicon-title {
+          font-family: var(--font-english);
+          font-size: 1.3rem;
+          margin: 0;
+          color: var(--text);
+        }
+
+        .rdr-lexicon-lemma {
+          color: var(--accent);
+          margin-left: 8px;
+        }
+
+        .rdr-lexicon-back {
+          all: unset;
+          cursor: pointer;
+          color: var(--text-light);
+          margin-right: 8px;
+        }
+
+        .rdr-lexicon-back:hover {
+          color: var(--accent);
+        }
+
+        .rdr-lexicon-close {
+          all: unset;
+          cursor: pointer;
+          color: var(--text-light);
+          font-size: 1.1rem;
+        }
+
+        .rdr-lexicon-search input {
+          width: 100%;
+          background: var(--input-bg);
+          border: 1px solid var(--border);
+          color: var(--text);
+          padding: 10px 12px;
+          border-radius: 6px;
+          margin-bottom: 14px;
+          font-family: var(--font-ui);
+          outline: none;
+        }
+
+        .rdr-lexicon-search input:focus {
+          border-color: var(--accent);
+        }
+
+        .rdr-lexicon-list {
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .rdr-lexicon-row {
+          all: unset;
+          cursor: pointer;
+          display: flex;
+          justify-content: space-between;
+          padding: 10px 12px;
+          border-radius: 6px;
+        }
+
+        .rdr-lexicon-row:hover {
+          background: var(--greek-hover);
+        }
+
+        .rdr-lexicon-word,
+        .rdr-lexicon-occ-work {
+          color: var(--text);
+        }
+
+        .rdr-lexicon-occ-ref {
+          font-family: var(--font-ui);
+          color: var(--accent);
+        }
+
+        .rdr-lexicon-count {
+          font-family: var(--font-ui);
+          font-size: 0.8rem;
+          color: var(--text-light);
+        }
+
+        .rdr-lexicon-summary {
+          font-size: 0.85rem;
+          color: var(--text-light);
+          margin-bottom: 10px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
         @media (max-width: 768px) {
           .mode-both .rdr-book-row {
             grid-template-columns: 1fr;
@@ -1366,6 +2134,14 @@ export default function PlotinusReader() {
 
           .rdr-grid-enneads {
             grid-template-columns: repeat(2, 1fr);
+          }
+
+          .rdr-page.sidebar-open {
+            padding-right: 0;
+          }
+
+          .rdr-sidebar {
+            width: 100%;
           }
         }
       `}</style>
