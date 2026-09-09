@@ -134,11 +134,21 @@ a {
   font-size: 1.4rem;
   letter-spacing: 0.04em;
   color: var(--parchment);
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .brand em {
   color: var(--gold-bright);
   font-style: normal;
+}
+
+.brand-logo {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
 }
 
 .nav-links {

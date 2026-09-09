@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 
@@ -38,6 +39,14 @@ export default function Layout({ children }) {
       <nav className="nav">
         <div className="nav-inner">
           <Link href="/" className="brand">
+            <Image
+              src="/logo.png"
+              alt="Plotinos Kütüphanesi logosu"
+              width={40}
+              height={45}
+              className="brand-logo"
+              priority
+            />
             <em>Plotinos</em> Kütüphanesi
           </Link>
           <div className="nav-links" style={{ alignItems: 'center' }}>
