@@ -71,14 +71,6 @@ function parseReference(reference) {
   };
 }
 
-/**
- * Yunanca aksan, breathing, diaeresis vb. işaretleri kaldırır.
- *
- * Ayrıca:
- * ς → σ
- *
- * böylece final sigma ile normal sigma aynı kabul edilir.
- */
 function normalizeGreek(str) {
   if (!str) return '';
 
@@ -90,11 +82,6 @@ function normalizeGreek(str) {
     .normalize('NFC');
 }
 
-/**
- * Bir Yunanca metni kelimelere ayırır.
- *
- * Noktalama işaretlerini dikkate almaz.
- */
 function tokenizeGreek(text) {
   if (!text) return [];
 
@@ -167,6 +154,8 @@ export default function PlotinusReader() {
   // ----------------------------------------------------------
 
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
+  const [globalVisibleResultCount, setGlobalVisibleResultCount] =
+    useState(RESULTS_PER_BATCH);
 
   // ----------------------------------------------------------
   // LEMMA / KÖK SÖZCÜK ARAMASI
@@ -446,22 +435,42 @@ export default function PlotinusReader() {
 
     const q = globalSearchQuery.trim().toLowerCase();
 
-    return allTexts
-      .filter((item) => {
-        return (
-          String(item.reference || '')
-            .toLowerCase()
-            .includes(q) ||
-          String(item.greek_text || '')
-            .toLowerCase()
-            .includes(q) ||
-          String(item.english_text || '')
-            .toLowerCase()
-            .includes(q)
-        );
-      })
-      .slice(0, 50);
+    return allTexts.filter((item) => {
+      return (
+        String(item.reference || '')
+          .toLowerCase()
+          .includes(q) ||
+        String(item.greek_text || '')
+          .toLowerCase()
+          .includes(q) ||
+        String(item.english_text || '')
+          .toLowerCase()
+          .includes(q)
+      );
+    });
   }, [globalSearchQuery, allTexts]);
+
+  const visibleGlobalSearchResults =
+    globalSearchResults.slice(
+      0,
+      globalVisibleResultCount
+    );
+
+  const showMoreGlobalResults = () => {
+    setGlobalVisibleResultCount(
+      (count) => count + RESULTS_PER_BATCH
+    );
+  };
+
+  // ==========================================================
+  // GLOBAL ARAMA DEĞİŞİNCE GÖRÜNÜR SONUÇLARI SIFIRLA
+  // ==========================================================
+
+  useEffect(() => {
+    setGlobalVisibleResultCount(
+      RESULTS_PER_BATCH
+    );
+  }, [globalSearchQuery]);
 
   // ==========================================================
   // LEMMA / FORM ÇÖZÜMLEME
@@ -684,8 +693,6 @@ export default function PlotinusReader() {
 
     // --------------------------------------------------------
     // FALLBACK
-    //
-    // Lexicon'da hiç kayıt yoksa doğrudan corpus taraması.
     // --------------------------------------------------------
 
     return {
@@ -914,7 +921,6 @@ export default function PlotinusReader() {
 
     if (!parsed) return;
 
-    // Aramayı kapat
     setSearchQuery('');
 
     setLexicalResults([]);
@@ -976,6 +982,10 @@ export default function PlotinusReader() {
       RESULTS_PER_BATCH
     );
 
+    setGlobalVisibleResultCount(
+      RESULTS_PER_BATCH
+    );
+
     setCurrentPage(1);
     setShowSectionGrid(false);
   };
@@ -1027,6 +1037,40 @@ export default function PlotinusReader() {
     setShowSectionGrid(false);
   };
 
+  // ==========================================================
+  // GLOBAL ARAMAYA GERİ DÖN
+  // ==========================================================
+
+  const handleBackToGlobalSearch = () => {
+    setSelectedEnnead(null);
+    setSelectedTractate(null);
+    setSelectedSections([]);
+
+    setTractates([]);
+    setSections([]);
+    setPassages([]);
+
+    setSearchQuery('');
+
+    setLexicalResults([]);
+    setLexicalTotal(0);
+    setLexicalForms([]);
+    setLexicalLemma(null);
+    setLexicalSource(null);
+
+    setVisibleResultCount(
+      RESULTS_PER_BATCH
+    );
+
+    setCurrentPage(1);
+    setShowSectionGrid(false);
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    });
+  };
+
   const toggleSection = (reference) => {
     setSelectedSections((prev) => {
       if (prev.includes(reference)) {
@@ -1062,7 +1106,9 @@ export default function PlotinusReader() {
       item.reference,
     ]);
 
-    setGlobalSearchQuery('');
+    // ÖNEMLİ:
+    // globalSearchQuery artık temizlenmiyor.
+    // Böylece arama ekranına geri dönülebiliyor.
 
     setShowSectionGrid(false);
 
@@ -1164,12 +1210,15 @@ export default function PlotinusReader() {
                   </div>
                 ) : (
                   <>
+
                     <div className="rdr-results-count">
-                      {globalSearchResults.length}{' '}
+                      {globalSearchResults.length.toLocaleString(
+                        'tr-TR'
+                      )}{' '}
                       sonuç bulundu
                     </div>
 
-                    {globalSearchResults.map(
+                    {visibleGlobalSearchResults.map(
                       (item) => (
                         <button
                           key={item.id}
@@ -1200,6 +1249,35 @@ export default function PlotinusReader() {
                         </button>
                       )
                     )}
+
+                    {/* GLOBAL SEARCH DEVAMINI GÖSTER */}
+
+                    {globalVisibleResultCount <
+                      globalSearchResults.length && (
+                      <div className="rdr-show-more">
+
+                        <button
+                          type="button"
+                          onClick={
+                            showMoreGlobalResults
+                          }
+                          className="rdr-show-more-btn"
+                        >
+                          Devamını Göster
+
+                          <span>
+                            {Math.min(
+                              RESULTS_PER_BATCH,
+                              globalSearchResults.length -
+                                globalVisibleResultCount
+                            )}{' '}
+                            sonuç
+                          </span>
+                        </button>
+
+                      </div>
+                    )}
+
                   </>
                 )}
 
@@ -1536,14 +1614,25 @@ export default function PlotinusReader() {
 
                 <div className="rdr-toolbar-left">
 
-                  <button
-                    onClick={
-                      handleBackToSections
-                    }
-                    className="rdr-back"
-                  >
-                    ‹ Bölüm Seçimi
-                  </button>
+                  {globalSearchQuery.trim() ? (
+                    <button
+                      onClick={
+                        handleBackToGlobalSearch
+                      }
+                      className="rdr-back"
+                    >
+                      ‹ Arama Sonuçlarına Dön
+                    </button>
+                  ) : (
+                    <button
+                      onClick={
+                        handleBackToSections
+                      }
+                      className="rdr-back"
+                    >
+                      ‹ Bölüm Seçimi
+                    </button>
+                  )}
 
                   <div>
                     <h1 className="rdr-work-title">
