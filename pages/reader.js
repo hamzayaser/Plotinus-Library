@@ -15,7 +15,43 @@ const ENNEADS = [
   { id: '6', number: '6', label: 'Altıncı Ennead' },
 ];
 
-const PAGE_SIZE = 30;
+const PAGE_SIZE = 20;
+const SUPABASE_PAGE_SIZE = 1000;
+const RESULTS_PER_BATCH = 20;
+
+// ============================================================
+// SUPABASE PAGINATION
+// ============================================================
+
+async function fetchAllPaginated(buildQuery) {
+  const rows = [];
+  let from = 0;
+
+  while (true) {
+    const { data, error } = await buildQuery().range(
+      from,
+      from + SUPABASE_PAGE_SIZE - 1
+    );
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      break;
+    }
+
+    rows.push(...data);
+
+    if (data.length < SUPABASE_PAGE_SIZE) {
+      break;
+    }
+
+    from += SUPABASE_PAGE_SIZE;
+  }
+
+  return rows;
+}
 
 // ============================================================
 // YARDIMCI FONKSİYONLAR
@@ -145,6 +181,13 @@ export default function PlotinusReader() {
   const [lexicalSource, setLexicalSource] = useState(null);
 
   // ----------------------------------------------------------
+  // DEVAMINI GÖSTER
+  // ----------------------------------------------------------
+
+  const [visibleResultCount, setVisibleResultCount] =
+    useState(RESULTS_PER_BATCH);
+
+  // ----------------------------------------------------------
   // DİĞER
   // ----------------------------------------------------------
 
@@ -197,23 +240,34 @@ export default function PlotinusReader() {
     async function fetchAllTexts() {
       setLoading(true);
 
-      const { data, error } = await supabase
-        .from('canonical_texts')
-        .select(
-          'id, author, work, reference, greek_text, english_text, translator, sort_order'
-        )
-        .eq('author', 'Plotinus')
-        .eq('work', 'Enneades')
-        .order('sort_order', { ascending: true });
+      try {
+        const data = await fetchAllPaginated(() =>
+          supabase
+            .from('canonical_texts')
+            .select(
+              'id, author, work, reference, greek_text, english_text, translator, sort_order'
+            )
+            .eq('author', 'Plotinus')
+            .eq('work', 'Enneades')
+            .order('sort_order', { ascending: true })
+        );
 
-      if (error) {
-        console.error('Plotinus metinleri çekilemedi:', error);
+        console.log(
+          'Plotinus verileri Supabase\'den çekildi:',
+          data.length
+        );
+
+        setAllTexts(data);
+      } catch (error) {
+        console.error(
+          'Plotinus metinleri çekilemedi:',
+          error
+        );
+
         setAllTexts([]);
-      } else {
-        setAllTexts(data || []);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     }
 
     fetchAllTexts();
@@ -413,23 +467,9 @@ export default function PlotinusReader() {
   // LEMMA / FORM ÇÖZÜMLEME
   // ==========================================================
 
-  /**
-   * Arama kutusuna girilen kelime için:
-   *
-   * 1. lemma_key aranır.
-   * 2. lemma_unaccented aranır.
-   * 3. form_unaccented aranır.
-   *
-   * Eğer bir lemma_key bulunursa o lemma_key'e bağlı
-   * bütün formlar çekilir.
-   *
-   * Eğer lemma_key bulunamazsa bulunan doğrudan form/lemma
-   * kullanılır.
-   *
-   * Hiçbir lexicon kaydı yoksa corpus doğrudan taranır.
-   */
   async function resolveLexicalForms(rawQuery) {
     const originalQuery = String(rawQuery || '').trim();
+
     const normalizedQuery =
       normalizeGreek(originalQuery);
 
@@ -448,19 +488,26 @@ export default function PlotinusReader() {
     // 1. lemma_key doğrudan aranıyor
     // --------------------------------------------------------
 
-    const {
-      data: keyRows,
-      error: keyError,
-    } = await supabase
-      .from('plato_lexicon_test')
-      .select(
-        'lemma, form, lemma_key, lemma_unaccented, form_unaccented'
-      )
-      .eq('work', 'Enneades')
-      .eq('lemma_key', originalQuery)
-      .limit(1000);
+    let keyRows = [];
 
-    if (!keyError && keyRows) {
+    try {
+      keyRows = await fetchAllPaginated(() =>
+        supabase
+          .from('plato_lexicon_test')
+          .select(
+            'lemma, form, lemma_key, lemma_unaccented, form_unaccented'
+          )
+          .eq('work', 'Enneades')
+          .eq('lemma_key', originalQuery)
+      );
+    } catch (error) {
+      console.error(
+        'lemma_key sorgusu başarısız:',
+        error
+      );
+    }
+
+    if (keyRows.length > 0) {
       rows.push(...keyRows);
     }
 
@@ -468,19 +515,26 @@ export default function PlotinusReader() {
     // 2. Aksansız lemma aranıyor
     // --------------------------------------------------------
 
-    const {
-      data: lemmaRows,
-      error: lemmaError,
-    } = await supabase
-      .from('plato_lexicon_test')
-      .select(
-        'lemma, form, lemma_key, lemma_unaccented, form_unaccented'
-      )
-      .eq('work', 'Enneades')
-      .eq('lemma_unaccented', normalizedQuery)
-      .limit(1000);
+    let lemmaRows = [];
 
-    if (!lemmaError && lemmaRows) {
+    try {
+      lemmaRows = await fetchAllPaginated(() =>
+        supabase
+          .from('plato_lexicon_test')
+          .select(
+            'lemma, form, lemma_key, lemma_unaccented, form_unaccented'
+          )
+          .eq('work', 'Enneades')
+          .eq('lemma_unaccented', normalizedQuery)
+      );
+    } catch (error) {
+      console.error(
+        'lemma_unaccented sorgusu başarısız:',
+        error
+      );
+    }
+
+    if (lemmaRows.length > 0) {
       rows.push(...lemmaRows);
     }
 
@@ -488,19 +542,26 @@ export default function PlotinusReader() {
     // 3. Aksansız form aranıyor
     // --------------------------------------------------------
 
-    const {
-      data: formRows,
-      error: formError,
-    } = await supabase
-      .from('plato_lexicon_test')
-      .select(
-        'lemma, form, lemma_key, lemma_unaccented, form_unaccented'
-      )
-      .eq('work', 'Enneades')
-      .eq('form_unaccented', normalizedQuery)
-      .limit(1000);
+    let formRows = [];
 
-    if (!formError && formRows) {
+    try {
+      formRows = await fetchAllPaginated(() =>
+        supabase
+          .from('plato_lexicon_test')
+          .select(
+            'lemma, form, lemma_key, lemma_unaccented, form_unaccented'
+          )
+          .eq('work', 'Enneades')
+          .eq('form_unaccented', normalizedQuery)
+      );
+    } catch (error) {
+      console.error(
+        'form_unaccented sorgusu başarısız:',
+        error
+      );
+    }
+
+    if (formRows.length > 0) {
       rows.push(...formRows);
     }
 
@@ -546,19 +607,26 @@ export default function PlotinusReader() {
     let finalRows = uniqueRows;
 
     if (lemmaKey) {
-      const {
-        data: allLemmaRows,
-        error: allLemmaError,
-      } = await supabase
-        .from('plato_lexicon_test')
-        .select(
-          'lemma, form, lemma_key, lemma_unaccented, form_unaccented'
-        )
-        .eq('work', 'Enneades')
-        .eq('lemma_key', lemmaKey)
-        .limit(5000);
+      let allLemmaRows = [];
 
-      if (!allLemmaError && allLemmaRows) {
+      try {
+        allLemmaRows = await fetchAllPaginated(() =>
+          supabase
+            .from('plato_lexicon_test')
+            .select(
+              'lemma, form, lemma_key, lemma_unaccented, form_unaccented'
+            )
+            .eq('work', 'Enneades')
+            .eq('lemma_key', lemmaKey)
+        );
+      } catch (error) {
+        console.error(
+          'Tüm lemma formları çekilemedi:',
+          error
+        );
+      }
+
+      if (allLemmaRows.length > 0) {
         finalRows = allLemmaRows;
       }
     }
@@ -734,6 +802,7 @@ export default function PlotinusReader() {
       setLexicalLemma(null);
       setLexicalSource(null);
       setLexicalLoading(false);
+      setVisibleResultCount(RESULTS_PER_BATCH);
       return;
     }
 
@@ -774,6 +843,10 @@ export default function PlotinusReader() {
         setLexicalSource(
           resolved.source
         );
+
+        setVisibleResultCount(
+          RESULTS_PER_BATCH
+        );
       } catch (error) {
         console.error(
           'Lemma araması sırasında hata:',
@@ -786,6 +859,9 @@ export default function PlotinusReader() {
           setLexicalForms([]);
           setLexicalLemma(null);
           setLexicalSource('corpus');
+          setVisibleResultCount(
+            RESULTS_PER_BATCH
+          );
         }
       } finally {
         if (!cancelled) {
@@ -799,6 +875,33 @@ export default function PlotinusReader() {
       clearTimeout(timer);
     };
   }, [searchQuery, allTexts]);
+
+  // ==========================================================
+  // GÖRÜNÜR LEXICAL SONUÇLARI
+  // ==========================================================
+
+  const visibleLexicalResults =
+    lexicalResults.slice(
+      0,
+      visibleResultCount
+    );
+
+  const showMoreResults = () => {
+    setVisibleResultCount(
+      (count) =>
+        count + RESULTS_PER_BATCH
+    );
+  };
+
+  // ==========================================================
+  // ARAMA DEĞİŞİNCE SIFIRLA
+  // ==========================================================
+
+  useEffect(() => {
+    setVisibleResultCount(
+      RESULTS_PER_BATCH
+    );
+  }, [searchQuery]);
 
   // ==========================================================
   // LEXICAL RESULT → PASSAGE
@@ -819,6 +922,9 @@ export default function PlotinusReader() {
     setLexicalForms([]);
     setLexicalLemma(null);
     setLexicalSource(null);
+    setVisibleResultCount(
+      RESULTS_PER_BATCH
+    );
 
     setPendingScroll(
       result.reference
@@ -866,6 +972,10 @@ export default function PlotinusReader() {
     setLexicalLemma(null);
     setLexicalSource(null);
 
+    setVisibleResultCount(
+      RESULTS_PER_BATCH
+    );
+
     setCurrentPage(1);
     setShowSectionGrid(false);
   };
@@ -889,6 +999,10 @@ export default function PlotinusReader() {
     setLexicalLemma(null);
     setLexicalSource(null);
 
+    setVisibleResultCount(
+      RESULTS_PER_BATCH
+    );
+
     setCurrentPage(1);
     setShowSectionGrid(false);
   };
@@ -904,6 +1018,10 @@ export default function PlotinusReader() {
     setLexicalForms([]);
     setLexicalLemma(null);
     setLexicalSource(null);
+
+    setVisibleResultCount(
+      RESULTS_PER_BATCH
+    );
 
     setCurrentPage(1);
     setShowSectionGrid(false);
@@ -1189,6 +1307,10 @@ export default function PlotinusReader() {
 
                         setLexicalSource(null);
 
+                        setVisibleResultCount(
+                          RESULTS_PER_BATCH
+                        );
+
                         setCurrentPage(1);
                       }}
                       className="rdr-index-row"
@@ -1454,7 +1576,7 @@ export default function PlotinusReader() {
                   )}
 
                   {/* ==================================================
-                      YENİ LEMMA ARAMA KUTUSU
+                      LEMMA ARAMA KUTUSU
                   ================================================== */}
 
                   <div className="rdr-search-box">
@@ -1469,6 +1591,10 @@ export default function PlotinusReader() {
                         );
 
                         setCurrentPage(1);
+
+                        setVisibleResultCount(
+                          RESULTS_PER_BATCH
+                        );
                       }}
                     />
 
@@ -1662,61 +1788,96 @@ export default function PlotinusReader() {
 
                       ) : (
 
-                        <div className="rdr-lexical-result-list">
+                        <>
 
-                          {lexicalResults.map(
-                            (result) => (
+                          <div className="rdr-lexical-result-list">
+
+                            {visibleLexicalResults.map(
+                              (result) => (
+                                <button
+                                  key={
+                                    result.reference
+                                  }
+                                  className="rdr-lexical-result"
+                                  onClick={() =>
+                                    goToLexicalResult(
+                                      result
+                                    )
+                                  }
+                                >
+
+                                  <div className="rdr-lexical-result-ref">
+                                    {result.reference}
+                                  </div>
+
+                                  <div className="rdr-lexical-result-info">
+
+                                    <span className="rdr-lexical-result-count">
+                                      {result.total}{' '}
+                                      ×
+                                    </span>
+
+                                    <span className="rdr-lexical-result-forms">
+
+                                      {result.forms.map(
+                                        (
+                                          form,
+                                          index
+                                        ) => (
+                                          <span
+                                            key={`${result.reference}-${form.form}-${index}`}
+                                            className="rdr-result-form"
+                                          >
+                                            {form.form}
+                                            {form.count >
+                                              1 &&
+                                              ` ×${form.count}`}
+                                          </span>
+                                        )
+                                      )}
+
+                                    </span>
+
+                                  </div>
+
+                                </button>
+                              )
+                            )}
+
+                          </div>
+
+                          {/* ==================================================
+                              DEVAMINI GÖSTER
+                          ================================================== */}
+
+                          {visibleResultCount <
+                            lexicalResults.length && (
+                            <div className="rdr-show-more">
+
                               <button
-                                key={
-                                  result.reference
+                                type="button"
+                                onClick={
+                                  showMoreResults
                                 }
-                                className="rdr-lexical-result"
-                                onClick={() =>
-                                  goToLexicalResult(
-                                    result
-                                  )
-                                }
+                                className="rdr-show-more-btn"
                               >
+                                Devamını Göster
 
-                                <div className="rdr-lexical-result-ref">
-                                  {result.reference}
-                                </div>
-
-                                <div className="rdr-lexical-result-info">
-
-                                  <span className="rdr-lexical-result-count">
-                                    {result.total}{' '}
-                                    ×
-                                  </span>
-
-                                  <span className="rdr-lexical-result-forms">
-
-                                    {result.forms.map(
-                                      (
-                                        form,
-                                        index
-                                      ) => (
-                                        <span
-                                          key={`${result.reference}-${form.form}-${index}`}
-                                          className="rdr-result-form"
-                                        >
-                                          {form.form}
-                                          {form.count >
-                                            1 &&
-                                            ` ×${form.count}`}
-                                        </span>
-                                      )
-                                    )}
-
-                                  </span>
-
-                                </div>
-
+                                <span>
+                                  {Math.min(
+                                    RESULTS_PER_BATCH,
+                                    lexicalResults.length -
+                                      visibleResultCount
+                                  )}{' '}
+                                  sonuç
+                                </span>
                               </button>
-                            )
+
+                            </div>
                           )}
 
-                        </div>
+                        </>
+
                       )}
 
                     </>
@@ -2552,6 +2713,43 @@ export default function PlotinusReader() {
           margin: 0;
           font-family: var(--font-ui);
           font-size: 0.85rem;
+        }
+
+        /* ====================================================
+           DEVAMINI GÖSTER
+        ==================================================== */
+
+        .rdr-show-more {
+          display: flex;
+          justify-content: center;
+          margin: 32px 0 10px;
+        }
+
+        .rdr-show-more-btn {
+          all: unset;
+          cursor: pointer;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 5px;
+          padding: 12px 24px;
+          border: 1px solid var(--border);
+          border-radius: 6px;
+          color: var(--accent);
+          background: rgba(255, 255, 255, 0.03);
+          font-family: var(--font-ui);
+          font-size: 0.8rem;
+          transition: all 0.2s ease;
+        }
+
+        .rdr-show-more-btn:hover {
+          border-color: var(--accent);
+          background: var(--greek-hover);
+        }
+
+        .rdr-show-more-btn span {
+          color: var(--text-light);
+          font-size: 0.68rem;
         }
 
         /* ====================================================
