@@ -42,8 +42,8 @@ export default function Layout({ children }) {
             <Image
               src="/logo.png"
               alt="Plotinos Kütüphanesi logosu"
-              width={40}
-              height={45}
+              width={46}
+              height={52}
               className="brand-logo"
               priority
             />

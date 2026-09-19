@@ -146,9 +146,14 @@ a {
 }
 
 .brand-logo {
-  height: 40px;
+  height: 46px;
   width: auto;
   object-fit: contain;
+}
+
+[data-theme='light'] .brand-logo {
+  /* Açık temada logo turkuazdan siyaha döner */
+  filter: brightness(0);
 }
 
 .nav-links {
