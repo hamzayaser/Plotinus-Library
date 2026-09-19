@@ -131,6 +131,54 @@ function compareReferences(a, b) {
   return Number(pa.section) - Number(pb.section);
 }
 
+function getPaginationItems(currentPage, totalPages) {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+
+  if (currentPage <= 4) {
+    return [1, 2, 3, 4, 5, 'ellipsis-end', totalPages];
+  }
+
+  if (currentPage >= totalPages - 3) {
+    return [
+      1,
+      'ellipsis-start',
+      totalPages - 4,
+      totalPages - 3,
+      totalPages - 2,
+      totalPages - 1,
+      totalPages,
+    ];
+  }
+
+  return [
+    1,
+    'ellipsis-start',
+    currentPage - 1,
+    currentPage,
+    currentPage + 1,
+    'ellipsis-end',
+    totalPages,
+  ];
+}
+
+// Perseus tarzı Yunanca (politonik) klavye düzeni
+const GREEK_KB_LETTERS = [
+  'α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ', 'λ', 'μ',
+  'ν', 'ξ', 'ο', 'π', 'ρ', 'σ', 'ς', 'τ', 'υ', 'φ', 'χ', 'ψ', 'ω',
+];
+
+const GREEK_KB_DIACRITICS = [
+  { label: '\u0301', char: '\u0301', title: 'Oksia (tonos)' },
+  { label: '\u0300', char: '\u0300', title: 'Varia' },
+  { label: '\u0342', char: '\u0342', title: 'Perispomeni' },
+  { label: '\u2019', char: '\u0313', title: 'Yumuşak nefes (psili)' },
+  { label: '\u02BD', char: '\u0314', title: 'Sert nefes (dasia)' },
+  { label: '\u00A8', char: '\u0308', title: 'Dialytika' },
+  { label: 'ͺ', char: '\u0345', title: 'Iota subscript' },
+];
+
 // ============================================================
 // ANA COMPONENT
 // ============================================================
@@ -187,6 +235,68 @@ export default function PlotinusReader() {
   const [pendingScroll, setPendingScroll] = useState(null);
 
   const topRef = useRef(null);
+
+  const [showGreekKeyboard, setShowGreekKeyboard] = useState(false);
+  const searchInputRef = useRef(null);
+
+  const insertGreekChar = (char) => {
+    const input = searchInputRef.current;
+
+    if (!input) {
+      setSearchQuery((prev) => (prev + char).normalize('NFC'));
+      return;
+    }
+
+    const start = input.selectionStart ?? searchQuery.length;
+    const end = input.selectionEnd ?? searchQuery.length;
+
+    const nextValue = (
+      searchQuery.slice(0, start) +
+      char +
+      searchQuery.slice(end)
+    ).normalize('NFC');
+
+    setSearchQuery(nextValue);
+    setCurrentPage(1);
+    setVisibleResultCount(RESULTS_PER_BATCH);
+
+    requestAnimationFrame(() => {
+      if (!searchInputRef.current) return;
+      const caret = start + 1;
+      searchInputRef.current.focus();
+      searchInputRef.current.setSelectionRange(caret, caret);
+    });
+  };
+
+  const [showGreekKeyboardGlobal, setShowGreekKeyboardGlobal] = useState(false);
+  const globalSearchInputRef = useRef(null);
+
+  const insertGreekCharGlobal = (char) => {
+    const input = globalSearchInputRef.current;
+
+    if (!input) {
+      setGlobalSearchQuery((prev) => (prev + char).normalize('NFC'));
+      return;
+    }
+
+    const start = input.selectionStart ?? globalSearchQuery.length;
+    const end = input.selectionEnd ?? globalSearchQuery.length;
+
+    const nextValue = (
+      globalSearchQuery.slice(0, start) +
+      char +
+      globalSearchQuery.slice(end)
+    ).normalize('NFC');
+
+    setGlobalSearchQuery(nextValue);
+
+    requestAnimationFrame(() => {
+      if (!globalSearchInputRef.current) return;
+      const caret = start + 1;
+      globalSearchInputRef.current.focus();
+      globalSearchInputRef.current.setSelectionRange(caret, caret);
+    });
+  };
 
   // ==========================================================
   // DİL AYARI
@@ -1126,6 +1236,11 @@ export default function PlotinusReader() {
     passages.length / PAGE_SIZE
   );
 
+  const paginationItems = useMemo(
+    () => getPaginationItems(currentPage, totalPages),
+    [currentPage, totalPages]
+  );
+
   const currentPassages =
     passages.slice(
       (currentPage - 1) * PAGE_SIZE,
@@ -1177,29 +1292,88 @@ export default function PlotinusReader() {
 
             {/* GLOBAL SEARCH */}
 
-            <div className="rdr-global-search">
-              <input
-                type="text"
-                placeholder="Tüm Ennead’lerde ara (kelime veya cümle)..."
-                value={globalSearchQuery}
-                onChange={(e) =>
-                  setGlobalSearchQuery(
-                    e.target.value
-                  )
-                }
-              />
-
-              {globalSearchQuery && (
-                <button
-                  className="rdr-search-clear"
-                  onClick={() =>
-                    setGlobalSearchQuery('')
+            <div className="rdr-global-search-row">
+              <div className="rdr-global-search">
+                <input
+                  ref={globalSearchInputRef}
+                  type="text"
+                  placeholder="Tüm Ennead’lerde ara (kelime veya cümle)..."
+                  value={globalSearchQuery}
+                  onChange={(e) =>
+                    setGlobalSearchQuery(
+                      e.target.value
+                    )
                   }
-                >
-                  ✕
-                </button>
-              )}
+                />
+
+                {globalSearchQuery && (
+                  <button
+                    className="rdr-search-clear"
+                    onClick={() =>
+                      setGlobalSearchQuery('')
+                    }
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              <button
+                type="button"
+                className={`rdr-greek-kb-toggle ${
+                  showGreekKeyboardGlobal ? 'active' : ''
+                }`}
+                onClick={() =>
+                  setShowGreekKeyboardGlobal((v) => !v)
+                }
+                title="Yunanca klavyeyi göster/gizle"
+                aria-label="Yunanca klavyeyi göster/gizle"
+              >
+                Ελ
+              </button>
             </div>
+
+            {showGreekKeyboardGlobal && (
+              <div className="rdr-greek-kb rdr-greek-kb-global">
+                <div className="rdr-greek-kb-row">
+                  {GREEK_KB_LETTERS.map((ch) => (
+                    <button
+                      key={ch}
+                      type="button"
+                      className="rdr-greek-kb-key"
+                      onClick={() => insertGreekCharGlobal(ch)}
+                    >
+                      {ch}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="rdr-greek-kb-row rdr-greek-kb-row-diacritics">
+                  {GREEK_KB_DIACRITICS.map((d) => (
+                    <button
+                      key={d.char}
+                      type="button"
+                      className="rdr-greek-kb-key rdr-greek-kb-key-diacritic"
+                      title={d.title}
+                      onClick={() => insertGreekCharGlobal(d.char)}
+                    >
+                      {d.label}
+                    </button>
+                  ))}
+
+                  <button
+                    type="button"
+                    className="rdr-greek-kb-key rdr-greek-kb-key-wide"
+                    onClick={() => {
+                      setGlobalSearchQuery('');
+                      globalSearchInputRef.current?.focus();
+                    }}
+                  >
+                    Temizle
+                  </button>
+                </div>
+              </div>
+            )}
 
             {globalSearchQuery.trim() ? (
               <div className="rdr-global-results">
@@ -1670,35 +1844,94 @@ export default function PlotinusReader() {
 
                   <div className="rdr-search-box">
 
-                    <input
-                      type="text"
-                      placeholder="Lemma / kök sözcük ara..."
-                      value={searchQuery}
-                      onChange={(e) => {
-                        setSearchQuery(
-                          e.target.value
-                        );
+                    <div className="rdr-search-input-wrap">
+                      <input
+                        ref={searchInputRef}
+                        type="text"
+                        placeholder="Lemma / kök sözcük ara..."
+                        value={searchQuery}
+                        onChange={(e) => {
+                          setSearchQuery(
+                            e.target.value
+                          );
 
-                        setCurrentPage(1);
+                          setCurrentPage(1);
 
-                        setVisibleResultCount(
-                          RESULTS_PER_BATCH
-                        );
-                      }}
-                    />
+                          setVisibleResultCount(
+                            RESULTS_PER_BATCH
+                          );
+                        }}
+                      />
 
-                    {searchQuery && (
-                      <button
-                        className="rdr-search-clear"
-                        onClick={() =>
-                          setSearchQuery('')
-                        }
-                      >
-                        ✕
-                      </button>
-                    )}
+                      {searchQuery && (
+                        <button
+                          className="rdr-search-clear"
+                          onClick={() =>
+                            setSearchQuery('')
+                          }
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      className={`rdr-greek-kb-toggle ${
+                        showGreekKeyboard ? 'active' : ''
+                      }`}
+                      onClick={() =>
+                        setShowGreekKeyboard((v) => !v)
+                      }
+                      title="Yunanca klavyeyi göster/gizle"
+                      aria-label="Yunanca klavyeyi göster/gizle"
+                    >
+                      Ελ
+                    </button>
 
                   </div>
+
+                  {showGreekKeyboard && (
+                    <div className="rdr-greek-kb">
+                      <div className="rdr-greek-kb-row">
+                        {GREEK_KB_LETTERS.map((ch) => (
+                          <button
+                            key={ch}
+                            type="button"
+                            className="rdr-greek-kb-key"
+                            onClick={() => insertGreekChar(ch)}
+                          >
+                            {ch}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="rdr-greek-kb-row rdr-greek-kb-row-diacritics">
+                        {GREEK_KB_DIACRITICS.map((d) => (
+                          <button
+                            key={d.char}
+                            type="button"
+                            className="rdr-greek-kb-key rdr-greek-kb-key-diacritic"
+                            title={d.title}
+                            onClick={() => insertGreekChar(d.char)}
+                          >
+                            {d.label}
+                          </button>
+                        ))}
+
+                        <button
+                          type="button"
+                          className="rdr-greek-kb-key rdr-greek-kb-key-wide"
+                          onClick={() => {
+                            setSearchQuery('');
+                            searchInputRef.current?.focus();
+                          }}
+                        >
+                          Temizle
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                 </div>
 
@@ -2075,29 +2308,44 @@ export default function PlotinusReader() {
                         ‹ Önceki
                       </button>
 
-                      {Array.from(
-                        {
-                          length: totalPages,
-                        },
-                        (_, i) => i + 1
-                      ).map((pageNum) => (
-                        <button
-                          key={pageNum}
-                          className={`rdr-page-num ${
-                            pageNum ===
-                            currentPage
-                              ? 'active'
-                              : ''
-                          }`}
-                          onClick={() =>
-                            handlePageChange(
-                              pageNum
-                            )
+                      {paginationItems.map(
+                        (item, index) => {
+                          if (
+                            item === 'ellipsis-start' ||
+                            item === 'ellipsis-end'
+                          ) {
+                            return (
+                              <span
+                                key={`${item}-${index}`}
+                                className="rdr-page-ellipsis"
+                              >
+                                …
+                              </span>
+                            );
                           }
-                        >
-                          {pageNum}
-                        </button>
-                      ))}
+
+                          const pageNum = item;
+
+                          return (
+                            <button
+                              key={pageNum}
+                              className={`rdr-page-num ${
+                                pageNum ===
+                                currentPage
+                                  ? 'active'
+                                  : ''
+                              }`}
+                              onClick={() =>
+                                handlePageChange(
+                                  pageNum
+                                )
+                              }
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        }
+                      )}
 
                       <button
                         disabled={
@@ -2216,9 +2464,17 @@ export default function PlotinusReader() {
           letter-spacing: 0.1em;
         }
 
+        .rdr-global-search-row {
+          display: flex;
+          align-items: flex-start;
+          gap: 8px;
+          margin-bottom: 28px;
+        }
+
         .rdr-global-search {
           position: relative;
-          margin-bottom: 28px;
+          flex: 1;
+          min-width: 0;
         }
 
         .rdr-global-search input {
@@ -2236,6 +2492,10 @@ export default function PlotinusReader() {
 
         .rdr-global-search input:focus {
           border-color: var(--accent);
+        }
+
+        .rdr-greek-kb-global {
+          margin-bottom: 28px;
         }
 
         .rdr-global-results {
@@ -2558,6 +2818,12 @@ export default function PlotinusReader() {
         ==================================================== */
 
         .rdr-search-box {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .rdr-search-input-wrap {
           position: relative;
         }
 
@@ -2587,6 +2853,92 @@ export default function PlotinusReader() {
           border: none;
           color: var(--text-light);
           cursor: pointer;
+        }
+
+        .rdr-greek-kb-toggle {
+          box-sizing: border-box;
+          height: 34px;
+          padding: 0 12px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--col-bg);
+          border: 1px solid var(--border);
+          border-radius: 6px;
+          color: var(--text-light);
+          font-family: var(--font-ui);
+          font-size: 0.78rem;
+          cursor: pointer;
+        }
+
+        .rdr-greek-kb-toggle:hover,
+        .rdr-greek-kb-toggle.active {
+          border-color: var(--accent);
+          color: var(--accent);
+        }
+
+        .rdr-greek-kb {
+          margin-top: 8px;
+          margin-bottom: 12px;
+          padding: 10px;
+          background: var(--col-bg);
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .rdr-greek-kb-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 4px;
+        }
+
+        .rdr-greek-kb-key {
+          box-sizing: border-box;
+          min-width: 30px;
+          height: 30px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background: transparent;
+          border: 1px solid var(--border);
+          border-radius: 5px;
+          color: var(--text);
+          font-family: var(--font-greek), var(--font-ui);
+          font-size: 0.95rem;
+          cursor: pointer;
+        }
+
+        .rdr-greek-kb-key:hover {
+          border-color: var(--accent);
+          color: var(--accent);
+          background: var(--greek-hover);
+        }
+
+        .rdr-greek-kb-key-diacritic {
+          color: var(--text-light);
+          font-size: 1.05rem;
+        }
+
+        .rdr-greek-kb-key-wide {
+          min-width: auto;
+          padding: 0 10px;
+          font-family: var(--font-ui);
+          font-size: 0.72rem;
+          color: var(--text-light);
+        }
+
+        @media (max-width: 600px) {
+          .rdr-search-box {
+            flex-wrap: wrap;
+          }
+
+          .rdr-search-input-wrap,
+          .rdr-search-box input {
+            width: 100%;
+          }
         }
 
         .rdr-stephanus-grid {
@@ -2967,6 +3319,14 @@ export default function PlotinusReader() {
         .rdr-page-btn:disabled {
           opacity: 0.5;
           cursor: not-allowed;
+        }
+
+        .rdr-page-ellipsis {
+          min-width: 20px;
+          text-align: center;
+          color: var(--text-light);
+          font-family: var(--font-ui);
+          font-size: 0.85rem;
         }
 
         /* ====================================================

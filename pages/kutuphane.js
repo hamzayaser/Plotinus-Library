@@ -55,6 +55,38 @@ const CATEGORY_SUBCATEGORY_MAP = {
   'Enneadlar': ['Ana Eser', 'Çeviriler'],
 };
 
+function getPaginationItems(currentPage, totalPages) {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+
+  if (currentPage <= 4) {
+    return [1, 2, 3, 4, 5, 'ellipsis-end', totalPages];
+  }
+
+  if (currentPage >= totalPages - 3) {
+    return [
+      1,
+      'ellipsis-start',
+      totalPages - 4,
+      totalPages - 3,
+      totalPages - 2,
+      totalPages - 1,
+      totalPages,
+    ];
+  }
+
+  return [
+    1,
+    'ellipsis-start',
+    currentPage - 1,
+    currentPage,
+    currentPage + 1,
+    'ellipsis-end',
+    totalPages,
+  ];
+}
+
 export default function Kutuphane({ sources = [], error }) {
   const [selectedCategory, setSelectedCategory] = useState('Tümü');
   const [selectedSubCategory, setSelectedSubCategory] = useState('Tümü');
@@ -756,6 +788,11 @@ export default function Kutuphane({ sources = [], error }) {
 
   const totalPages = Math.ceil(
     filteredSources.length / itemsPerPage
+  );
+
+  const paginationItems = useMemo(
+    () => getPaginationItems(currentPage, totalPages),
+    [currentPage, totalPages]
   );
 
   const paginatedSources = useMemo(() => {
@@ -1533,56 +1570,79 @@ export default function Kutuphane({ sources = [], error }) {
 
                       {/* SAYFA NUMARALARI */}
 
-                      {Array.from(
-                        {
-                          length:
-                            totalPages,
-                        },
-                        (_, i) =>
-                          i + 1
-                      ).map(
-                        (page) => (
-                          <button
-                            key={
-                              page
-                            }
-                            onClick={() =>
-                              setCurrentPage(
+                      {paginationItems.map(
+                        (item, index) => {
+                          if (
+                            item ===
+                              'ellipsis-start' ||
+                            item ===
+                              'ellipsis-end'
+                          ) {
+                            return (
+                              <span
+                                key={`${item}-${index}`}
+                                style={{
+                                  minWidth: '20px',
+                                  textAlign:
+                                    'center',
+                                  color:
+                                    'var(--parchment-dim)',
+                                  fontFamily:
+                                    'var(--font-mono)',
+                                  fontSize:
+                                    '0.75rem',
+                                }}
+                              >
+                                …
+                              </span>
+                            );
+                          }
+
+                          const page = item;
+
+                          return (
+                            <button
+                              key={
                                 page
-                              )
-                            }
-                            style={{
-                              padding:
-                                '6px 10px',
-                              fontSize:
-                                '0.75rem',
-                              fontFamily:
-                                'var(--font-mono)',
-                              background:
-                                currentPage ===
-                                page
-                                  ? 'rgba(183, 138, 52, 0.2)'
-                                  : 'transparent',
-                              border:
-                                '1px solid ' +
-                                (currentPage ===
-                                page
-                                  ? 'var(--gold)'
-                                  : 'var(--line)'),
-                              color:
-                                currentPage ===
-                                page
-                                  ? 'var(--gold-bright)'
-                                  : 'var(--parchment)',
-                              cursor:
-                                'pointer',
-                              borderRadius:
-                                '4px',
-                            }}
-                          >
-                            {page}
-                          </button>
-                        )
+                              }
+                              onClick={() =>
+                                setCurrentPage(
+                                  page
+                                )
+                              }
+                              style={{
+                                padding:
+                                  '6px 10px',
+                                fontSize:
+                                  '0.75rem',
+                                fontFamily:
+                                  'var(--font-mono)',
+                                background:
+                                  currentPage ===
+                                  page
+                                    ? 'rgba(183, 138, 52, 0.2)'
+                                    : 'transparent',
+                                border:
+                                  '1px solid ' +
+                                  (currentPage ===
+                                  page
+                                    ? 'var(--gold)'
+                                    : 'var(--line)'),
+                                color:
+                                  currentPage ===
+                                  page
+                                    ? 'var(--gold-bright)'
+                                    : 'var(--parchment)',
+                                cursor:
+                                  'pointer',
+                                borderRadius:
+                                  '4px',
+                              }}
+                            >
+                              {page}
+                            </button>
+                          );
+                        }
                       )}
 
                       {/* SONRAKİ */}
