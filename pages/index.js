@@ -279,17 +279,16 @@ export default function Home({ siteSettings }) {
               <div className="modern-badge">
                 <span className="modern-badge-dot" />
                 Plotinos Kütüphanesi
-              </div>
+             </div>
 
-              <h1>
-                Bir'den <em>Tüm'e</em>,
-                <br />
-                taşan ışığın izinde
-              </h1>
+	     <h1>
+ 	     O yaşam ki, aşağı ve düşük tüm başkalardan arınık, mücerret halde;
+  	     dünyevi olan hiçbir şeye arzu duymayan bir yaşamdır.
+  	     Uzletten vahdete kaçıştır. [En. VI.9.11]
+	     </h1>
 
-              {/* KALDIRILDI: modern-hero-description */}
+	    </div>
 
-            </div>
 
             {/* =================================================
                 SAĞ NAVİGASYON
