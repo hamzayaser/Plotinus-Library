@@ -62,11 +62,33 @@ function EmanationScene({ scrollProgress }) {
 
 export default function Home({ siteSettings }) {
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [isLightMode, setIsLightMode] = useState(false);
 
   const heroImageUrl = siteSettings?.hero_image_url || '';
   const heroImageCaption = siteSettings?.hero_image_caption || '';
 
   useEffect(() => {
+    // Tema kontrolü (Örn: html veya body elementinde 'light' sınıfı var mı?)
+    const checkTheme = () => {
+      const htmlClass = document.documentElement.className;
+      const bodyClass = document.body.className;
+      
+      // Projenizde açık tema için kullanılan anahtar kelimeyi buraya yazabilirsiniz (örn: 'light', 'light-theme')
+      const isLight = 
+        htmlClass.includes('light') || 
+        bodyClass.includes('light') || 
+        document.documentElement.getAttribute('data-theme') === 'light';
+
+      setIsLightMode(isLight);
+    };
+
+    checkTheme();
+
+    // Tema değiştiğinde yakalayabilmek için bir MutationObserver ekleyebiliriz
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
     let ticking = false;
 
     const updateScroll = () => {
@@ -98,6 +120,7 @@ export default function Home({ siteSettings }) {
 
     return () => {
       window.removeEventListener('scroll', updateScroll);
+      observer.disconnect();
     };
   }, []);
 
@@ -120,8 +143,15 @@ export default function Home({ siteSettings }) {
                 Plotinos Kütüphanesi
               </div>
 
-              {/* ÇOK DAHA KÜÇÜK VE DENGELİ H1 ALANI */}
-              <h1 style={{ fontSize: '1.15rem', lineHeight: '2', maxWidth: '380px', fontWeight: '400' }}>
+              {/* Temaya göre font-weight dinamik olarak ayarlanır */}
+              <h1 
+                style={{ 
+                  fontSize: '1.15rem', 
+                  lineHeight: '2', 
+                  maxWidth: '380px', 
+                  fontWeight: isLightMode ? '700' : '400' 
+                }}
+              >
                 O yaşam ki, aşağı ve düşük tüm başkalardan arınık, mücerret halde;
                 dünyevi olan hiçbir şeye arzu duymayan bir yaşamdır.
                 Uzletten vahdete kaçıştır. <span style={{ opacity: 0.7, fontSize: '0.85em', display: 'inline-block', marginTop: '0.3rem' }}>[En. VI.9.11]</span>
