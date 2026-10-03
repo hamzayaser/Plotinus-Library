@@ -7,7 +7,7 @@ const NAV_ITEMS = [
   { href: '/', label: 'Ana Sayfa' },
   { href: '/kutuphane', label: 'Kütüphane' },
   { href: '/via-plotin', label: 'Via Plotin' },
-  { href: '/reader', label: 'Enneads' }, // ← YENİ
+  { href: '/reader', label: 'Enneads' },
   { href: '/iletisim', label: 'İletişim' },
 ];
 
@@ -17,8 +17,6 @@ export default function Layout({ children }) {
   const router = useRouter();
   const [theme, setTheme] = useState('dark');
 
-  // Sayfa yüklendiğinde kayıtlı tema tercihini oku (yoksa dark kalır,
-  // mevcut siteyle aynı görünümü korur).
   useEffect(() => {
     const saved = typeof window !== 'undefined' && localStorage.getItem(THEME_KEY);
     if (saved === 'light' || saved === 'dark') {
@@ -45,6 +43,10 @@ export default function Layout({ children }) {
               width={46}
               height={52}
               className="brand-logo"
+              style={{
+                filter: theme === 'light' ? 'invert(1) hue-rotate(180deg)' : 'none',
+                transition: 'filter 0.3s ease',
+              }}
               priority
             />
             <em>Plotinos</em> Kütüphanesi
@@ -67,13 +69,11 @@ export default function Layout({ children }) {
               title={theme === 'dark' ? 'Açık temaya geç' : 'Koyu temaya geç'}
             >
               {theme === 'dark' ? (
-                // Güneş ikonu (açık temaya geçiş)
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                   <circle cx="12" cy="12" r="4.2" />
                   <path d="M12 2.5v2.4M12 19.1v2.4M4.6 4.6l1.7 1.7M17.7 17.7l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.6 19.4l1.7-1.7M17.7 6.3l1.7-1.7" strokeLinecap="round" />
                 </svg>
               ) : (
-                // Ay ikonu (koyu temaya geçiş)
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M20.4 14.7A8.5 8.5 0 1 1 9.3 3.6a7 7 0 0 0 11.1 11.1Z" />
                 </svg>
