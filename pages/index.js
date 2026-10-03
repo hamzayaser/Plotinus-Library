@@ -121,7 +121,7 @@ export default function Home({ siteSettings }) {
               </div>
 
               {/* ÇOK DAHA KÜÇÜK VE DENGELİ H1 ALANI */}
-              <h1 style={{ fontSize: '0.95rem', lineHeight: '1.5', maxWidth: '280px', fontWeight: '400' }}>
+              <h1 style={{ fontSize: '1.15rem', lineHeight: '2', maxWidth: '380px', fontWeight: '400' }}>
                 O yaşam ki, aşağı ve düşük tüm başkalardan arınık, mücerret halde;
                 dünyevi olan hiçbir şeye arzu duymayan bir yaşamdır.
                 Uzletten vahdete kaçıştır. <span style={{ opacity: 0.7, fontSize: '0.85em', display: 'inline-block', marginTop: '0.3rem' }}>[En. VI.9.11]</span>
