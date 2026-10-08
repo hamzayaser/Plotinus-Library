@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Layout from '../components/Layout';
-
 const TAXONOMY = {
   'Ontoloji': ['Bir', 'Nous', 'Psyche', 'Emanasyon', 'Madde ve Kötülük'],
   'Epistemoloji': ['Diyalektik', 'Biliş Teorisi', 'İdealar Teorisi', 'Sezgi ve Kavrayış'],
@@ -12,222 +11,165 @@ const TAXONOMY = {
   'Etkilenim': ['Pre-Sokratikler', 'Gnostisizm', 'Platon ve Platoncu Gelenek', 'Aristoteles ve Yorumcuları', 'Stoacılık ve Orta Platonculuk', 'Doğu Doktrinleri'],
   'Etki': ['Geç Antik Çağ ve Proklos', 'İslam Felsefesi', 'Rönesans Platonculuğu', 'Alman İdealizmi', 'Tasavvuf'],
   'Türkçe Literatür': ['Türkçeye Kazandırılan Eserler'],
-  'Enneadlar': ['Ana Eser', 'Çeviriler'],
+  'Enneadlar': ['Ana Eser', 'Çeviriler']
 };
-
-// ---------------------------------------------------------------
-// KAYNAK TİPLERİ VE TİPE GÖRE GÖRÜNECEK ALANLAR
-// ---------------------------------------------------------------
-const TIP_OPTIONS = [
-  'Kitap',
-  'Kitap Bölümü',
-  'Makale',
-  'Yüksek Lisans Tezi',
-  'Doktora Tezi',
-  'Ansiklopedi Maddesi',
-  'Bildiri/Tebliğ',
-];
-
+const TIP_OPTIONS = ['Kitap', 'Kitap Bölümü', 'Makale', 'Yüksek Lisans Tezi', 'Doktora Tezi', 'Ansiklopedi Maddesi', 'Bildiri/Tebliğ'];
 const TIP_FIELD_CONFIG = {
   'Kitap': {
-    // Kitabın farklı bir dile çevrilmiş olması durumunda
     cevirmen: {
       label: 'Çevirmen',
-      placeholder: 'Örn: Ahmet Yılmaz',
+      placeholder: 'Örn: Ahmet Yılmaz'
     },
-
-    // Editör, hazırlayan, neşreden veya müdekkik
     editor: {
       label: 'Editör / Hazırlayan / Neşreden / Müdekkik',
-      placeholder: 'Örn: Mehmet Özdemir',
+      placeholder: 'Örn: Mehmet Özdemir'
     },
-
-    // Yayın bilgileri
     yayin_yeri: {
       label: 'Yayın Yeri',
-      placeholder: 'Örn: İstanbul',
+      placeholder: 'Örn: İstanbul'
     },
-
     yayinevi: {
       label: 'Yayınevi',
-      placeholder: 'Örn: İletişim Yayınları',
+      placeholder: 'Örn: İletişim Yayınları'
     },
-
     baski: {
       label: 'Baskı',
-      placeholder: 'Örn: 3',
-    },
+      placeholder: 'Örn: 3'
+    }
   },
-
   'Kitap Bölümü': {
-    // Bölüm başka bir dilden çevrilmiş olabilir
     cevirmen: {
       label: 'Çevirmen',
-      placeholder: 'Örn: Ali Dere',
+      placeholder: 'Örn: Ali Dere'
     },
-
-    // Bölümün bulunduğu kitabın editörü
     editor: {
       label: 'Editör / Hazırlayan / Neşreden / Müdekkik',
-      placeholder: 'Örn: Sönmez Kutlu',
+      placeholder: 'Örn: Sönmez Kutlu'
     },
-
-    // Bölümün bulunduğu kitabın adı
     kaynak_adi: {
       label: 'Kitap Adı',
-      placeholder: 'Örn: İmam Mâturîdî ve Mâturidilik',
+      placeholder: 'Örn: İmam Mâturîdî ve Mâturidilik'
     },
-
     yayin_yeri: {
       label: 'Yayın Yeri',
-      placeholder: 'Örn: Ankara',
+      placeholder: 'Örn: Ankara'
     },
-
     yayinevi: {
       label: 'Yayınevi',
-      placeholder: 'Örn: Kitâbiyât Yayınları',
+      placeholder: 'Örn: Kitâbiyât Yayınları'
     },
-
     baski: {
       label: 'Baskı',
-      placeholder: 'Örn: 2',
+      placeholder: 'Örn: 2'
     },
-
-    // Kitap bölümünde mutlaka önemli
     sayfa_araligi: {
       label: 'Sayfa Aralığı',
-      placeholder: 'Örn: 295-304',
-    },
+      placeholder: 'Örn: 295-304'
+    }
   },
-
   'Makale': {
-    // Çeviri makalelerde kullanılacak.
-    // Normal makalede boş bırakılabilir.
     cevirmen: {
       label: 'Çevirmen',
-      placeholder: 'Örn: Veysel Kasar',
+      placeholder: 'Örn: Veysel Kasar'
     },
-
     kaynak_adi: {
       label: 'Dergi Adı',
-      placeholder: 'Örn: Nazariyat',
+      placeholder: 'Örn: Nazariyat'
     },
-
     cilt: {
       label: 'Cilt',
-      placeholder: 'Örn: 5',
+      placeholder: 'Örn: 5'
     },
-
     sayi: {
       label: 'Sayı',
-      placeholder: 'Örn: 3',
+      placeholder: 'Örn: 3'
     },
-
     sayfa_araligi: {
       label: 'Sayfa Aralığı',
-      placeholder: 'Örn: 175-193',
-    },
+      placeholder: 'Örn: 175-193'
+    }
   },
-
   'Yüksek Lisans Tezi': {
     universite: {
       label: 'Üniversite',
-      placeholder: 'Örn: Cumhuriyet Üniversitesi',
+      placeholder: 'Örn: Cumhuriyet Üniversitesi'
     },
-
     enstitu: {
       label: 'Enstitü / Anabilim Dalı',
-      placeholder: 'Örn: Sosyal Bilimler Enstitüsü',
+      placeholder: 'Örn: Sosyal Bilimler Enstitüsü'
     },
-
     yayin_yeri: {
       label: 'Şehir',
-      placeholder: 'Örn: Sivas',
-    },
+      placeholder: 'Örn: Sivas'
+    }
   },
-
   'Doktora Tezi': {
     universite: {
       label: 'Üniversite',
-      placeholder: 'Örn: Cumhuriyet Üniversitesi',
+      placeholder: 'Örn: Cumhuriyet Üniversitesi'
     },
-
     enstitu: {
       label: 'Enstitü / Anabilim Dalı',
-      placeholder: 'Örn: Sosyal Bilimler Enstitüsü',
+      placeholder: 'Örn: Sosyal Bilimler Enstitüsü'
     },
-
     yayin_yeri: {
       label: 'Şehir',
-      placeholder: 'Örn: Sivas',
-    },
+      placeholder: 'Örn: Sivas'
+    }
   },
-
   'Ansiklopedi Maddesi': {
     editor: {
       label: 'Editör',
-      placeholder: 'Örn: Komisyon',
+      placeholder: 'Örn: Komisyon'
     },
-
     kaynak_adi: {
       label: 'Ansiklopedi Adı',
-      placeholder: 'Örn: TDV İslâm Ansiklopedisi',
+      placeholder: 'Örn: TDV İslâm Ansiklopedisi'
     },
-
     yayinevi: {
       label: 'Yayınevi',
-      placeholder: 'Örn: TDV Yayınları',
+      placeholder: 'Örn: TDV Yayınları'
     },
-
     yayin_yeri: {
       label: 'Yayın Yeri',
-      placeholder: 'Örn: İstanbul',
+      placeholder: 'Örn: İstanbul'
     },
-
     cilt: {
       label: 'Cilt',
-      placeholder: 'Örn: 18',
+      placeholder: 'Örn: 18'
     },
-
     sayfa_araligi: {
       label: 'Sayfa Aralığı',
-      placeholder: 'Örn: 12-15',
-    },
+      placeholder: 'Örn: 12-15'
+    }
   },
-
   'Bildiri/Tebliğ': {
     editor: {
       label: 'Editör / Hazırlayan',
-      placeholder: 'Örn: Cengiz Çuhadar vd.',
+      placeholder: 'Örn: Cengiz Çuhadar vd.'
     },
-
     kaynak_adi: {
       label: 'Bildiri Kitabı / Kongre Adı',
-      placeholder: 'Örn: IV. Uluslararası Şeyh Şa’ban-ı Velî Sempozyumu',
+      placeholder: 'Örn: IV. Uluslararası Şeyh Şa’ban-ı Velî Sempozyumu'
     },
-
     yayin_yeri: {
       label: 'Yayın Yeri',
-      placeholder: 'Örn: Kastamonu',
+      placeholder: 'Örn: Kastamonu'
     },
-
     yayinevi: {
       label: 'Yayınevi',
-      placeholder: 'Örn: Kastamonu Üniversitesi Yayınları',
+      placeholder: 'Örn: Kastamonu Üniversitesi Yayınları'
     },
-
     baski: {
       label: 'Baskı',
-      placeholder: 'Örn: 1',
+      placeholder: 'Örn: 1'
     },
-
     sayfa_araligi: {
       label: 'Sayfa Aralığı',
-      placeholder: 'Örn: 643-658',
-    },
-  },
+      placeholder: 'Örn: 643-658'
+    }
+  }
 };
-
 const EMPTY_SOURCE = {
   baslik: '',
   kategori: [],
@@ -247,15 +189,13 @@ const EMPTY_SOURCE = {
   sayi: '',
   sayfa_araligi: '',
   baski: '',
-  pdf_url: '',
+  pdf_url: ''
 };
-
 export default function Admin() {
   const [password, setPassword] = useState('');
   const [authed, setAuthed] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [checking, setChecking] = useState(false);
-
   useEffect(() => {
     const saved = typeof window !== 'undefined' && sessionStorage.getItem('adminPw');
     if (saved) {
@@ -263,7 +203,6 @@ export default function Admin() {
       setAuthed(true);
     }
   }, []);
-
   async function handleLogin(e) {
     e.preventDefault();
     setChecking(true);
@@ -271,8 +210,12 @@ export default function Admin() {
     try {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          password
+        })
       });
       if (res.ok) {
         sessionStorage.setItem('adminPw', password);
@@ -286,31 +229,29 @@ export default function Admin() {
       setChecking(false);
     }
   }
-
   function logout() {
     sessionStorage.removeItem('adminPw');
     setAuthed(false);
     setPassword('');
   }
-
   if (!authed) {
-    return (
-      <Layout>
-        <section className="hero" style={{ paddingBottom: 40 }}>
+    return <Layout>
+        <section className="hero" style={{
+        paddingBottom: 40
+      }}>
           <div className="eyebrow">Admin</div>
           <h1>Yönetim Paneli</h1>
         </section>
-        <section className="section" style={{ borderTop: 'none' }}>
-          <div className="container" style={{ maxWidth: 420 }}>
+        <section className="section" style={{
+        borderTop: 'none'
+      }}>
+          <div className="container" style={{
+          maxWidth: 420
+        }}>
             <form onSubmit={handleLogin} className="admin-section">
               <div className="field">
                 <label>Şifre</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoFocus
-                />
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)} autoFocus />
               </div>
               <button className="btn" type="submit" disabled={checking}>
                 {checking ? 'Kontrol ediliyor...' : 'Giriş yap'}
@@ -319,13 +260,12 @@ export default function Admin() {
             </form>
           </div>
         </section>
-      </Layout>
-    );
+      </Layout>;
   }
-
-  return (
-    <Layout>
-      <section className="hero" style={{ paddingBottom: 32 }}>
+  return <Layout>
+      <section className="hero" style={{
+      paddingBottom: 32
+    }}>
         <div className="eyebrow">Admin</div>
         <h1>Yönetim Paneli</h1>
         <p className="lead">
@@ -333,9 +273,14 @@ export default function Admin() {
           bilgilerini buradan düzenleyebilirsin.
         </p>
       </section>
-      <section className="section admin-panel" style={{ borderTop: 'none' }}>
+      <section className="section admin-panel" style={{
+      borderTop: 'none'
+    }}>
         <div className="container">
-          <div style={{ textAlign: 'right', marginBottom: 20 }}>
+          <div style={{
+          textAlign: 'right',
+          marginBottom: 20
+        }}>
             <button className="btn secondary" onClick={logout}>
               Çıkış yap
             </button>
@@ -346,21 +291,22 @@ export default function Admin() {
           <SiteSettingsAdmin password={password} />
         </div>
       </section>
-    </Layout>
-  );
+    </Layout>;
 }
-
 function authHeaders(password) {
-  return { 'Content-Type': 'application/json', 'x-admin-password': password };
+  return {
+    'Content-Type': 'application/json',
+    'x-admin-password': password
+  };
 }
-
-// ---------------------------------------------------------------
-// AÇILIR/KAPANIR TEK KATEGORİ DROPDOWN (ortak component)
-// ---------------------------------------------------------------
-function MultiSelectDropdown({ selected, onChange, options, placeholder }) {
+function MultiSelectDropdown({
+  selected,
+  onChange,
+  options,
+  placeholder
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
-
   useEffect(() => {
     function handleClickOutside(e) {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
@@ -368,118 +314,99 @@ function MultiSelectDropdown({ selected, onChange, options, placeholder }) {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const toggle = (val) => {
+  const toggle = val => {
     let next = Array.isArray(selected) ? [...selected] : [];
-    if (next.includes(val)) next = next.filter((c) => c !== val);
-    else next.push(val);
+    if (next.includes(val)) next = next.filter(c => c !== val);else next.push(val);
     onChange(next);
   };
-
-  const label =
-    selected.length === 0
-      ? placeholder
-      : selected.length <= 2
-      ? selected.join(', ')
-      : `${selected.length} seçildi`;
-
-  return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        disabled={options.length === 0}
-        style={{
-          width: '100%',
-          textAlign: 'left',
-          padding: '9px 12px',
-          borderRadius: '6px',
-          border: '1px solid var(--line, rgba(255,255,255,0.15))',
-          background: 'rgba(255,255,255,0.03)',
-          color: selected.length ? 'var(--parchment, #fff)' : 'var(--parchment-dim, #999)',
-          cursor: options.length === 0 ? 'not-allowed' : 'pointer',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          fontSize: '0.85rem',
-          opacity: options.length === 0 ? 0.5 : 1,
-        }}
-      >
+  const label = selected.length === 0 ? placeholder : selected.length <= 2 ? selected.join(', ') : `${selected.length} seçildi`;
+  return <div ref={ref} style={{
+    position: 'relative'
+  }}>
+      <button type="button" onClick={() => setOpen(o => !o)} disabled={options.length === 0} style={{
+      width: '100%',
+      textAlign: 'left',
+      padding: '9px 12px',
+      borderRadius: '6px',
+      border: '1px solid var(--line, rgba(255,255,255,0.15))',
+      background: 'rgba(255,255,255,0.03)',
+      color: selected.length ? 'var(--parchment, #fff)' : 'var(--parchment-dim, #999)',
+      cursor: options.length === 0 ? 'not-allowed' : 'pointer',
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      fontSize: '0.85rem',
+      opacity: options.length === 0 ? 0.5 : 1
+    }}>
         <span>{label}</span>
-        <span style={{ opacity: 0.6, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s ease' }}>▾</span>
+        <span style={{
+        opacity: 0.6,
+        transform: open ? 'rotate(180deg)' : 'none',
+        transition: 'transform 0.15s ease'
+      }}>▾</span>
       </button>
 
-      {open && options.length > 0 && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 6px)',
-            left: 0,
-            right: 0,
-            zIndex: 100,
-            background: 'var(--ink, #14100c)',
-            border: '1px solid var(--gold, #d4af37)',
-            borderRadius: '8px',
-            padding: '8px',
-            maxHeight: '240px',
-            overflowY: 'auto',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '2px',
-          }}
-        >
-          {options.map((opt) => (
-            <label
-              key={opt}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontSize: '0.82rem',
-                cursor: 'pointer',
-                padding: '6px 8px',
-                borderRadius: '4px',
-              }}
-            >
+      {open && options.length > 0 && <div style={{
+      position: 'absolute',
+      top: 'calc(100% + 6px)',
+      left: 0,
+      right: 0,
+      zIndex: 100,
+      background: 'var(--ink, #14100c)',
+      border: '1px solid var(--gold, #d4af37)',
+      borderRadius: '8px',
+      padding: '8px',
+      maxHeight: '240px',
+      overflowY: 'auto',
+      boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '2px'
+    }}>
+          {options.map(opt => <label key={opt} style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        fontSize: '0.82rem',
+        cursor: 'pointer',
+        padding: '6px 8px',
+        borderRadius: '4px'
+      }}>
               <input type="checkbox" checked={selected.includes(opt)} onChange={() => toggle(opt)} />
               {opt}
-            </label>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+            </label>)}
+        </div>}
+    </div>;
 }
-
-// ---------------------------------------------------------------
-// TEKRAR KULLANILABİLİR YAYIN/KAYNAK FORMU COMPONENTİ
-// ---------------------------------------------------------------
-function SourceFormFields({ form, setForm, handleSubmit, status, editingId, onCancel }) {
+function SourceFormFields({
+  form,
+  setForm,
+  handleSubmit,
+  status,
+  editingId,
+  onCancel
+}) {
   const availableSubCats = useMemo(() => {
     const cats = Array.isArray(form.kategori) ? form.kategori : [];
     const set = new Set();
-    cats.forEach((cat) => (TAXONOMY[cat] || []).forEach((sub) => set.add(sub)));
+    cats.forEach(cat => (TAXONOMY[cat] || []).forEach(sub => set.add(sub)));
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'tr'));
   }, [form.kategori]);
-
-  const handleCategoryChange = (next) => {
+  const handleCategoryChange = next => {
     const cats = next;
     const validSubs = new Set();
-    cats.forEach((cat) => (TAXONOMY[cat] || []).forEach((sub) => validSubs.add(sub)));
+    cats.forEach(cat => (TAXONOMY[cat] || []).forEach(sub => validSubs.add(sub)));
     const currentSubs = Array.isArray(form.alt_kategori) ? form.alt_kategori : [];
     setForm({
       ...form,
       kategori: cats,
-      alt_kategori: currentSubs.filter((s) => validSubs.has(s)),
+      alt_kategori: currentSubs.filter(s => validSubs.has(s))
     });
   };
-
   const cfg = TIP_FIELD_CONFIG[form.tip] || {};
-
   function handleTipChange(newTip) {
     const newCfg = TIP_FIELD_CONFIG[newTip] || {};
-    const clearIfHidden = (key) => (newCfg[key] ? form[key] : '');
+    const clearIfHidden = key => newCfg[key] ? form[key] : '';
     setForm({
       ...form,
       tip: newTip,
@@ -493,38 +420,63 @@ function SourceFormFields({ form, setForm, handleSubmit, status, editingId, onCa
       cilt: clearIfHidden('cilt'),
       sayi: clearIfHidden('sayi'),
       sayfa_araligi: clearIfHidden('sayfa_araligi'),
-      baski: clearIfHidden('baski'),
+      baski: clearIfHidden('baski')
     });
   }
-
-  return (
-    <form onSubmit={handleSubmit}>
+  return <form onSubmit={handleSubmit}>
       <div className="field">
         <label>Başlık</label>
-        <input value={form.baslik} onChange={(e) => setForm({ ...form, baslik: e.target.value })} required />
+        <input value={form.baslik} onChange={e => setForm({
+        ...form,
+        baslik: e.target.value
+      })} required />
       </div>
 
-      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: 12 }}>
-        <div className="field" style={{ flex: '1 1 160px', margin: 0 }}>
+      <div style={{
+      display: 'flex',
+      gap: '10px',
+      flexWrap: 'wrap',
+      marginTop: 12
+    }}>
+        <div className="field" style={{
+        flex: '1 1 160px',
+        margin: 0
+      }}>
           <label>Yazar</label>
-          <input value={form.yazar} onChange={(e) => setForm({ ...form, yazar: e.target.value })} />
+          <input value={form.yazar} onChange={e => setForm({
+          ...form,
+          yazar: e.target.value
+        })} />
         </div>
-        <div className="field" style={{ flex: '0 1 90px', margin: 0 }}>
+        <div className="field" style={{
+        flex: '0 1 90px',
+        margin: 0
+      }}>
           <label>Yıl</label>
-          <input value={form.yil} onChange={(e) => setForm({ ...form, yil: e.target.value })} />
+          <input value={form.yil} onChange={e => setForm({
+          ...form,
+          yil: e.target.value
+        })} />
         </div>
-        <div className="field" style={{ flex: '1 1 180px', margin: 0 }}>
+        <div className="field" style={{
+        flex: '1 1 180px',
+        margin: 0
+      }}>
           <label>Eser Tipi</label>
-          <select value={form.tip} onChange={(e) => handleTipChange(e.target.value)} required>
+          <select value={form.tip} onChange={e => handleTipChange(e.target.value)} required>
             <option value="">-- Seç --</option>
-            {TIP_OPTIONS.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
+            {TIP_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
-        <div className="field" style={{ flex: '0 1 130px', margin: 0 }}>
+        <div className="field" style={{
+        flex: '0 1 130px',
+        margin: 0
+      }}>
           <label>Dil</label>
-          <select value={form.dil} onChange={(e) => setForm({ ...form, dil: e.target.value })}>
+          <select value={form.dil} onChange={e => setForm({
+          ...form,
+          dil: e.target.value
+        })}>
             <option value="">-- Seç --</option>
             <option value="Türkçe">Türkçe</option>
             <option value="İngilizce">İngilizce</option>
@@ -534,146 +486,184 @@ function SourceFormFields({ form, setForm, handleSubmit, status, editingId, onCa
             <option value="Yunanca">Yunanca</option>
           </select>
         </div>
-        {cfg.cevirmen && (
-          <div className="field" style={{ flex: '1 1 160px', margin: 0 }}>
+        {cfg.cevirmen && <div className="field" style={{
+        flex: '1 1 160px',
+        margin: 0
+      }}>
             <label>Çevirmen</label>
-            <input value={form.cevirmen} onChange={(e) => setForm({ ...form, cevirmen: e.target.value })} />
-          </div>
-        )}
+            <input value={form.cevirmen} onChange={e => setForm({
+          ...form,
+          cevirmen: e.target.value
+        })} />
+          </div>}
       </div>
 
-      {!form.tip && (
-        <p className="status" style={{ marginTop: 12, opacity: 0.7 }}>
+      {!form.tip && <p className="status" style={{
+      marginTop: 12,
+      opacity: 0.7
+    }}>
           Devam etmek için önce eser tipini seçin — ilgili alanlar burada açılacak.
-        </p>
-      )}
+        </p>}
 
-      {form.tip && (
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: 12 }}>
-          {cfg.editor && (
-            <div className="field" style={{ flex: '1 1 180px', margin: 0 }}>
+      {form.tip && <div style={{
+      display: 'flex',
+      gap: '10px',
+      flexWrap: 'wrap',
+      marginTop: 12
+    }}>
+          {cfg.editor && <div className="field" style={{
+        flex: '1 1 180px',
+        margin: 0
+      }}>
               <label>{cfg.editor.label}</label>
-              <input value={form.editor} onChange={(e) => setForm({ ...form, editor: e.target.value })} />
-            </div>
-          )}
-          {cfg.kaynak_adi && (
-            <div className="field" style={{ flex: '2 1 220px', margin: 0 }}>
+              <input value={form.editor} onChange={e => setForm({
+          ...form,
+          editor: e.target.value
+        })} />
+            </div>}
+          {cfg.kaynak_adi && <div className="field" style={{
+        flex: '2 1 220px',
+        margin: 0
+      }}>
               <label>{cfg.kaynak_adi.label}</label>
-              <input
-                value={form.kaynak_adi}
-                onChange={(e) => setForm({ ...form, kaynak_adi: e.target.value })}
-                placeholder={cfg.kaynak_adi.placeholder}
-              />
-            </div>
-          )}
-          {cfg.universite && (
-            <div className="field" style={{ flex: '2 1 220px', margin: 0 }}>
+              <input value={form.kaynak_adi} onChange={e => setForm({
+          ...form,
+          kaynak_adi: e.target.value
+        })} placeholder={cfg.kaynak_adi.placeholder} />
+            </div>}
+          {cfg.universite && <div className="field" style={{
+        flex: '2 1 220px',
+        margin: 0
+      }}>
               <label>{cfg.universite.label}</label>
-              <input value={form.universite} onChange={(e) => setForm({ ...form, universite: e.target.value })} />
-            </div>
-          )}
-          {cfg.enstitu && (
-            <div className="field" style={{ flex: '2 1 220px', margin: 0 }}>
+              <input value={form.universite} onChange={e => setForm({
+          ...form,
+          universite: e.target.value
+        })} />
+            </div>}
+          {cfg.enstitu && <div className="field" style={{
+        flex: '2 1 220px',
+        margin: 0
+      }}>
               <label>{cfg.enstitu.label}</label>
-              <input value={form.enstitu} onChange={(e) => setForm({ ...form, enstitu: e.target.value })} />
-            </div>
-          )}
-          {cfg.yayinevi && (
-            <div className="field" style={{ flex: '2 1 220px', margin: 0 }}>
+              <input value={form.enstitu} onChange={e => setForm({
+          ...form,
+          enstitu: e.target.value
+        })} />
+            </div>}
+          {cfg.yayinevi && <div className="field" style={{
+        flex: '2 1 220px',
+        margin: 0
+      }}>
               <label>{cfg.yayinevi.label}</label>
-              <input
-                value={form.yayinevi}
-                onChange={(e) => setForm({ ...form, yayinevi: e.target.value })}
-                placeholder={cfg.yayinevi.placeholder}
-              />
-            </div>
-          )}
-          {cfg.yayin_yeri && (
-            <div className="field" style={{ flex: '1 1 140px', margin: 0 }}>
+              <input value={form.yayinevi} onChange={e => setForm({
+          ...form,
+          yayinevi: e.target.value
+        })} placeholder={cfg.yayinevi.placeholder} />
+            </div>}
+          {cfg.yayin_yeri && <div className="field" style={{
+        flex: '1 1 140px',
+        margin: 0
+      }}>
               <label>{cfg.yayin_yeri.label}</label>
-              <input
-                value={form.yayin_yeri}
-                onChange={(e) => setForm({ ...form, yayin_yeri: e.target.value })}
-                placeholder={cfg.yayin_yeri.placeholder}
-              />
-            </div>
-          )}
-          {cfg.baski && (
-            <div className="field" style={{ flex: '0 1 160px', margin: 0 }}>
+              <input value={form.yayin_yeri} onChange={e => setForm({
+          ...form,
+          yayin_yeri: e.target.value
+        })} placeholder={cfg.yayin_yeri.placeholder} />
+            </div>}
+          {cfg.baski && <div className="field" style={{
+        flex: '0 1 160px',
+        margin: 0
+      }}>
               <label>Baskı / Edisyon Sayısı</label>
-              <input
-                type="text"
-                placeholder="Örn: 2. Basım veya 2"
-                value={form.baski}
-                onChange={(e) => setForm({ ...form, baski: e.target.value })}
-              />
-            </div>
-          )}
-          {cfg.cilt && (
-            <div className="field" style={{ flex: '0 1 90px', margin: 0 }}>
+              <input type="text" placeholder="Örn: 2. Basım veya 2" value={form.baski} onChange={e => setForm({
+          ...form,
+          baski: e.target.value
+        })} />
+            </div>}
+          {cfg.cilt && <div className="field" style={{
+        flex: '0 1 90px',
+        margin: 0
+      }}>
               <label>{cfg.cilt.label}</label>
-              <input value={form.cilt} onChange={(e) => setForm({ ...form, cilt: e.target.value })} />
-            </div>
-          )}
-          {cfg.sayi && (
-            <div className="field" style={{ flex: '0 1 90px', margin: 0 }}>
+              <input value={form.cilt} onChange={e => setForm({
+          ...form,
+          cilt: e.target.value
+        })} />
+            </div>}
+          {cfg.sayi && <div className="field" style={{
+        flex: '0 1 90px',
+        margin: 0
+      }}>
               <label>{cfg.sayi.label}</label>
-              <input value={form.sayi} onChange={(e) => setForm({ ...form, sayi: e.target.value })} />
-            </div>
-          )}
-          {cfg.sayfa_araligi && (
-            <div className="field" style={{ flex: '0 1 110px', margin: 0 }}>
+              <input value={form.sayi} onChange={e => setForm({
+          ...form,
+          sayi: e.target.value
+        })} />
+            </div>}
+          {cfg.sayfa_araligi && <div className="field" style={{
+        flex: '0 1 110px',
+        margin: 0
+      }}>
               <label>{cfg.sayfa_araligi.label}</label>
-              <input
-                value={form.sayfa_araligi}
-                onChange={(e) => setForm({ ...form, sayfa_araligi: e.target.value })}
-                placeholder={cfg.sayfa_araligi.placeholder}
-              />
-            </div>
-          )}
-        </div>
-      )}
+              <input value={form.sayfa_araligi} onChange={e => setForm({
+          ...form,
+          sayfa_araligi: e.target.value
+        })} placeholder={cfg.sayfa_araligi.placeholder} />
+            </div>}
+        </div>}
 
-      <div style={{ display: 'flex', gap: '10px', marginTop: 12, flexWrap: 'wrap' }}>
-        <div className="field" style={{ flex: '1 1 220px', margin: 0 }}>
+      <div style={{
+      display: 'flex',
+      gap: '10px',
+      marginTop: 12,
+      flexWrap: 'wrap'
+    }}>
+        <div className="field" style={{
+        flex: '1 1 220px',
+        margin: 0
+      }}>
           <label>Kategoriler</label>
-          <MultiSelectDropdown
-            selected={Array.isArray(form.kategori) ? form.kategori : []}
-            onChange={handleCategoryChange}
-            options={Object.keys(TAXONOMY)}
-            placeholder="-- Kategori Seç --"
-          />
+          <MultiSelectDropdown selected={Array.isArray(form.kategori) ? form.kategori : []} onChange={handleCategoryChange} options={Object.keys(TAXONOMY)} placeholder="-- Kategori Seç --" />
         </div>
-        <div className="field" style={{ flex: '1 1 220px', margin: 0 }}>
+        <div className="field" style={{
+        flex: '1 1 220px',
+        margin: 0
+      }}>
           <label>Alt Kategoriler</label>
-          <MultiSelectDropdown
-            selected={Array.isArray(form.alt_kategori) ? form.alt_kategori : []}
-            onChange={(next) => setForm({ ...form, alt_kategori: next })}
-            options={availableSubCats}
-            placeholder={availableSubCats.length === 0 ? 'Önce kategori seçin' : '-- Alt Kategori Seç --'}
-          />
+          <MultiSelectDropdown selected={Array.isArray(form.alt_kategori) ? form.alt_kategori : []} onChange={next => setForm({
+          ...form,
+          alt_kategori: next
+        })} options={availableSubCats} placeholder={availableSubCats.length === 0 ? 'Önce kategori seçin' : '-- Alt Kategori Seç --'} />
         </div>
       </div>
 
-      <div className="field" style={{ marginTop: 12 }}>
+      <div className="field" style={{
+      marginTop: 12
+    }}>
         <label>PDF Bağlantısı (URL)</label>
-        <input type="url" placeholder="https://..." value={form.pdf_url} onChange={(e) => setForm({ ...form, pdf_url: e.target.value })} />
+        <input type="url" placeholder="https://..." value={form.pdf_url} onChange={e => setForm({
+        ...form,
+        pdf_url: e.target.value
+      })} />
       </div>
 
-      <div style={{ marginTop: 16 }}>
+      <div style={{
+      marginTop: 16
+    }}>
         <button className="btn" type="submit">{editingId ? 'Güncelle' : 'Ekle'}</button>
-        {editingId && (
-          <button type="button" className="btn secondary" style={{ marginLeft: 10 }} onClick={onCancel}>
+        {editingId && <button type="button" className="btn secondary" style={{
+        marginLeft: 10
+      }} onClick={onCancel}>
             İptal
-          </button>
-        )}
+          </button>}
       </div>
       {status && <p className={`status ${status.ok ? 'ok' : 'err'}`}>{status.msg}</p>}
-    </form>
-  );
+    </form>;
 }
-
-function SourcesAdmin({ password }) {
+function SourcesAdmin({
+  password
+}) {
   const [sources, setSources] = useState([]);
   const [addForm, setAddForm] = useState(EMPTY_SOURCE);
   const [editForm, setEditForm] = useState(EMPTY_SOURCE);
@@ -683,14 +673,15 @@ function SourcesAdmin({ password }) {
   const [modalStatus, setModalStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showAllSources, setShowAllSources] = useState(false);
-
   async function load() {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/sources', { headers: authHeaders(password) });
+      const res = await fetch('/api/admin/sources', {
+        headers: authHeaders(password)
+      });
       if (res.ok) {
         const data = await res.json();
-        setSources(Array.isArray(data) ? data : (data.data || []));
+        setSources(Array.isArray(data) ? data : data.data || []);
       }
     } catch (err) {
       console.error('Yükleme hatası:', err);
@@ -698,8 +689,9 @@ function SourcesAdmin({ password }) {
       setLoading(false);
     }
   }
-
-  useEffect(() => { load(); }, []); // eslint-disable-line
+  useEffect(() => {
+    load();
+  }, []); // eslint-disable-line
 
   async function handleAddSubmit(e) {
     e.preventDefault();
@@ -707,40 +699,49 @@ function SourcesAdmin({ password }) {
     const payload = {
       ...addForm,
       kategori: Array.isArray(addForm.kategori) ? addForm.kategori : [],
-      alt_kategori: Array.isArray(addForm.alt_kategori) ? addForm.alt_kategori : [],
+      alt_kategori: Array.isArray(addForm.alt_kategori) ? addForm.alt_kategori : []
     };
-
     const res = await fetch('/api/admin/sources', {
       method: 'POST',
       headers: authHeaders(password),
-      body: JSON.stringify(payload),
+      body: JSON.stringify(payload)
     });
     if (res.ok) {
-      setStatus({ ok: true, msg: 'Yeni eser eklendi.' });
+      setStatus({
+        ok: true,
+        msg: 'Yeni eser eklendi.'
+      });
       setAddForm(EMPTY_SOURCE);
       load();
     } else {
       const err = await res.json();
-      setStatus({ ok: false, msg: err.error || 'Hata oluştu.' });
+      setStatus({
+        ok: false,
+        msg: err.error || 'Hata oluştu.'
+      });
     }
   }
-
   async function handleEditSubmit(e) {
     e.preventDefault();
     setModalStatus(null);
     const payload = {
       ...editForm,
       kategori: Array.isArray(editForm.kategori) ? editForm.kategori : [],
-      alt_kategori: Array.isArray(editForm.alt_kategori) ? editForm.alt_kategori : [],
+      alt_kategori: Array.isArray(editForm.alt_kategori) ? editForm.alt_kategori : []
     };
-
     const res = await fetch('/api/admin/sources', {
       method: 'PUT',
       headers: authHeaders(password),
-      body: JSON.stringify({ id: editingId, ...payload }),
+      body: JSON.stringify({
+        id: editingId,
+        ...payload
+      })
     });
     if (res.ok) {
-      setModalStatus({ ok: true, msg: 'Başarıyla güncellendi.' });
+      setModalStatus({
+        ok: true,
+        msg: 'Başarıyla güncellendi.'
+      });
       setTimeout(() => {
         setIsModalOpen(false);
         setEditingId(null);
@@ -750,20 +751,18 @@ function SourcesAdmin({ password }) {
       }, 600);
     } else {
       const err = await res.json();
-      setModalStatus({ ok: false, msg: err.error || 'Hata oluştu.' });
+      setModalStatus({
+        ok: false,
+        msg: err.error || 'Hata oluştu.'
+      });
     }
   }
-
   function startEdit(s) {
     setEditingId(s.id);
     let cats = [];
-    if (Array.isArray(s.kategori)) cats = s.kategori;
-    else if (typeof s.kategori === 'string') cats = s.kategori.split(',').map((c) => c.trim()).filter(Boolean);
-
+    if (Array.isArray(s.kategori)) cats = s.kategori;else if (typeof s.kategori === 'string') cats = s.kategori.split(',').map(c => c.trim()).filter(Boolean);
     let subs = [];
-    if (Array.isArray(s.alt_kategori)) subs = s.alt_kategori;
-    else if (typeof s.alt_kategori === 'string') subs = s.alt_kategori.split(',').map((c) => c.trim()).filter(Boolean);
-
+    if (Array.isArray(s.alt_kategori)) subs = s.alt_kategori;else if (typeof s.alt_kategori === 'string') subs = s.alt_kategori.split(',').map(c => c.trim()).filter(Boolean);
     setEditForm({
       baslik: s.baslik || '',
       kategori: cats,
@@ -783,132 +782,141 @@ function SourcesAdmin({ password }) {
       sayi: s.sayi || '',
       sayfa_araligi: s.sayfa_araligi || '',
       baski: s.baski || '',
-      pdf_url: s.pdf_url || '',
+      pdf_url: s.pdf_url || ''
     });
     setIsModalOpen(true);
   }
-
   async function handleDelete(id) {
     if (!confirm('Bu kaynağı silmek istediğine emin misin?')) return;
     const res = await fetch(`/api/admin/sources?id=${id}`, {
       method: 'DELETE',
-      headers: authHeaders(password),
+      headers: authHeaders(password)
     });
     if (res.ok) load();
   }
-
   const displayedSources = showAllSources ? sources : sources.slice(0, 5);
+  return <div className="admin-section">
+      <h2 style={{
+      fontFamily: 'var(--font-display)',
+      marginTop: 0
+    }}>Yeni Kaynak Ekle</h2>
 
-  return (
-    <div className="admin-section">
-      <h2 style={{ fontFamily: 'var(--font-display)', marginTop: 0 }}>Yeni Kaynak Ekle</h2>
+      <SourceFormFields form={addForm} setForm={setAddForm} handleSubmit={handleAddSubmit} status={status} editingId={null} />
 
-      <SourceFormFields
-        form={addForm}
-        setForm={setAddForm}
-        handleSubmit={handleAddSubmit}
-        status={status}
-        editingId={null}
-      />
-
-      <div style={{ marginTop: 40 }}>
+      <div style={{
+      marginTop: 40
+    }}>
         <h3>Ekli Kaynaklar ({sources.length})</h3>
         {loading && <p className="status">Yükleniyor...</p>}
-        {!loading && displayedSources.map((s) => {
-          const katStr = Array.isArray(s.kategori) ? s.kategori.join(', ') : s.kategori;
-          const altKatStr = Array.isArray(s.alt_kategori) ? s.alt_kategori.join(', ') : s.alt_kategori;
-
-          return (
-            <div className="admin-row" key={s.id}>
+        {!loading && displayedSources.map(s => {
+        const katStr = Array.isArray(s.kategori) ? s.kategori.join(', ') : s.kategori;
+        const altKatStr = Array.isArray(s.alt_kategori) ? s.alt_kategori.join(', ') : s.alt_kategori;
+        return <div className="admin-row" key={s.id}>
               <div>
                 <strong>{s.baslik}</strong>
                 <div className="meta">
                   {s.yazar} {s.cevirmen ? `(Çev: ${s.cevirmen})` : ''} {s.yil ? `· ${s.yil}` : ''} {s.tip ? `· ${s.tip}` : ''} {s.dil ? `· ${s.dil}` : ''} ·
-                  <span style={{ color: 'var(--color-primary, #c5a059)', marginLeft: 4 }}>
+                  <span style={{
+                color: 'var(--color-primary, #c5a059)',
+                marginLeft: 4
+              }}>
                     [{katStr}{altKatStr ? ` > ${altKatStr}` : ''}]
                   </span>
-                  {s.pdf_url && <span style={{ marginLeft: 8 }}>📄 PDF Var</span>}
+                  {s.pdf_url && <span style={{
+                marginLeft: 8
+              }}>📄 PDF Var</span>}
                 </div>
               </div>
               <div>
                 <button className="btn secondary" onClick={() => startEdit(s)}>Düzenle</button>
-                <button className="btn danger" style={{ marginLeft: 8 }} onClick={() => handleDelete(s.id)}>Sil</button>
+                <button className="btn danger" style={{
+              marginLeft: 8
+            }} onClick={() => handleDelete(s.id)}>Sil</button>
               </div>
-            </div>
-          );
-        })}
+            </div>;
+      })}
 
-        {!loading && sources.length > 5 && (
-          <button className="btn secondary" style={{ marginTop: 12, width: '100%' }} onClick={() => setShowAllSources(!showAllSources)}>
+        {!loading && sources.length > 5 && <button className="btn secondary" style={{
+        marginTop: 12,
+        width: '100%'
+      }} onClick={() => setShowAllSources(!showAllSources)}>
             {showAllSources ? 'Listeyi Daralt ▲' : `Tüm Kaynakları Göster (${sources.length}) ▼`}
-          </button>
-        )}
+          </button>}
 
         {!loading && sources.length === 0 && <p className="status">Henüz kaynak yok.</p>}
       </div>
 
-      {isModalOpen && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.75)',
-          backdropFilter: 'blur(5px)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 1000,
-          padding: '20px'
-        }}>
+      {isModalOpen && <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.75)',
+      backdropFilter: 'blur(5px)',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000,
+      padding: '20px'
+    }}>
           <div style={{
-            background: 'var(--ink, #14100c)',
-            border: '1px solid var(--gold, #d4af37)',
-            borderRadius: '12px',
-            padding: '24px',
-            maxWidth: '700px',
-            width: '100%',
-            maxHeight: '90vh',
-            overflowY: 'auto',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.8)'
+        background: 'var(--ink, #14100c)',
+        border: '1px solid var(--gold, #d4af37)',
+        borderRadius: '12px',
+        padding: '24px',
+        maxWidth: '700px',
+        width: '100%',
+        maxHeight: '90vh',
+        overflowY: 'auto',
+        boxShadow: '0 20px 50px rgba(0,0,0,0.8)'
+      }}>
+            <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '16px'
+        }}>
+              <h3 style={{
+            margin: 0,
+            fontFamily: 'var(--font-display)'
+          }}>Eseri Düzenle</h3>
+              <button onClick={() => setIsModalOpen(false)} style={{
+            background: 'transparent',
+            border: 'none',
+            color: '#fff',
+            fontSize: '1.2rem',
+            cursor: 'pointer'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontFamily: 'var(--font-display)' }}>Eseri Düzenle</h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.2rem', cursor: 'pointer' }}
-              >
                 ✕
               </button>
             </div>
 
-            <SourceFormFields
-              form={editForm}
-              setForm={setEditForm}
-              handleSubmit={handleEditSubmit}
-              status={modalStatus}
-              editingId={editingId}
-              onCancel={() => setIsModalOpen(false)}
-            />
+            <SourceFormFields form={editForm} setForm={setEditForm} handleSubmit={handleEditSubmit} status={modalStatus} editingId={editingId} onCancel={() => setIsModalOpen(false)} />
           </div>
-        </div>
-      )}
-    </div>
-  );
+        </div>}
+    </div>;
 }
-
-function ViaPlotinAdmin({ password }) {
+function ViaPlotinAdmin({
+  password
+}) {
   const [posts, setPosts] = useState([]);
-  const [form, setForm] = useState({ baslik: '', kategori: '', tarih: '', ozet: '', content: '' });
+  const [form, setForm] = useState({
+    baslik: '',
+    kategori: '',
+    tarih: '',
+    ozet: '',
+    content: ''
+  });
   const [editingId, setEditingId] = useState(null);
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
-
   async function load() {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/via-plotin', { headers: authHeaders(password) });
+      const res = await fetch('/api/admin/via-plotin', {
+        headers: authHeaders(password)
+      });
       if (res.ok) {
         const data = await res.json();
         setPosts(Array.isArray(data) ? data : []);
@@ -919,31 +927,44 @@ function ViaPlotinAdmin({ password }) {
       setLoading(false);
     }
   }
-
-  useEffect(() => { load(); }, []); // eslint-disable-line
+  useEffect(() => {
+    load();
+  }, []); // eslint-disable-line
 
   async function handleSubmit(e) {
     e.preventDefault();
     setStatus(null);
     const method = editingId ? 'PUT' : 'POST';
-    const body = editingId ? { id: editingId, ...form } : form;
-
+    const body = editingId ? {
+      id: editingId,
+      ...form
+    } : form;
     const res = await fetch('/api/admin/via-plotin', {
       method,
       headers: authHeaders(password),
-      body: JSON.stringify(body),
+      body: JSON.stringify(body)
     });
-
     if (res.ok) {
-      setStatus({ ok: true, msg: editingId ? 'Yazı güncellendi.' : 'Yazı başarıyla eklendi.' });
-      setForm({ baslik: '', kategori: '', tarih: '', ozet: '', content: '' });
+      setStatus({
+        ok: true,
+        msg: editingId ? 'Yazı güncellendi.' : 'Yazı başarıyla eklendi.'
+      });
+      setForm({
+        baslik: '',
+        kategori: '',
+        tarih: '',
+        ozet: '',
+        content: ''
+      });
       setEditingId(null);
       load();
     } else {
-      setStatus({ ok: false, msg: 'Hata oluştu.' });
+      setStatus({
+        ok: false,
+        msg: 'Hata oluştu.'
+      });
     }
   }
-
   function startEdit(p) {
     setEditingId(p.id);
     setForm({
@@ -951,98 +972,121 @@ function ViaPlotinAdmin({ password }) {
       kategori: p.kategori || '',
       tarih: p.tarih || '',
       ozet: p.ozet || '',
-      content: p.content || '',
+      content: p.content || ''
     });
   }
-
   async function handleDelete(id) {
     if (!confirm('Bu yazıyı silmek istediğine emin misin?')) return;
     const res = await fetch(`/api/admin/via-plotin?id=${id}`, {
       method: 'DELETE',
-      headers: authHeaders(password),
+      headers: authHeaders(password)
     });
     if (res.ok) load();
   }
-
-  return (
-    <div className="admin-section" style={{ marginTop: 40 }}>
-      <h2 style={{ fontFamily: 'var(--font-display)', marginTop: 0 }}>Via Plotin Yazıları</h2>
+  return <div className="admin-section" style={{
+    marginTop: 40
+  }}>
+      <h2 style={{
+      fontFamily: 'var(--font-display)',
+      marginTop: 0
+    }}>Via Plotin Yazıları</h2>
 
       <form onSubmit={handleSubmit}>
         <div className="grid grid-2">
           <div className="field">
             <label>Yazı Başlığı</label>
-            <input value={form.baslik} onChange={(e) => setForm({ ...form, baslik: e.target.value })} required />
+            <input value={form.baslik} onChange={e => setForm({
+            ...form,
+            baslik: e.target.value
+          })} required />
           </div>
           <div className="field">
             <label>Kategori / Etiket</label>
-            <input value={form.kategori} onChange={(e) => setForm({ ...form, kategori: e.target.value })} placeholder="Örn: ONTOLOJİ, NOUS" />
+            <input value={form.kategori} onChange={e => setForm({
+            ...form,
+            kategori: e.target.value
+          })} placeholder="Örn: ONTOLOJİ, NOUS" />
           </div>
           <div className="field">
             <label>Tarih / Tür</label>
-            <input value={form.tarih} onChange={(e) => setForm({ ...form, tarih: e.target.value })} placeholder="Örn: 2026 · Makale" />
+            <input value={form.tarih} onChange={e => setForm({
+            ...form,
+            tarih: e.target.value
+          })} placeholder="Örn: 2026 · Makale" />
           </div>
           <div className="field">
             <label>Kısa Özet</label>
-            <input value={form.ozet} onChange={(e) => setForm({ ...form, ozet: e.target.value })} placeholder="Kart üstünde görünecek kısa açıklama" />
+            <input value={form.ozet} onChange={e => setForm({
+            ...form,
+            ozet: e.target.value
+          })} placeholder="Kart üstünde görünecek kısa açıklama" />
           </div>
         </div>
 
         <div className="field">
           <label>Yazı İçeriği (Ana Metin)</label>
-          <textarea style={{ minHeight: 200 }} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} required />
+          <textarea style={{
+          minHeight: 200
+        }} value={form.content} onChange={e => setForm({
+          ...form,
+          content: e.target.value
+        })} required />
         </div>
 
         <button className="btn" type="submit">{editingId ? 'Güncelle' : 'Yazı Ekle'}</button>
-        {editingId && (
-          <button
-            type="button"
-            className="btn secondary"
-            style={{ marginLeft: 10 }}
-            onClick={() => { setEditingId(null); setForm({ baslik: '', kategori: '', tarih: '', ozet: '', content: '' }); }}
-          >
+        {editingId && <button type="button" className="btn secondary" style={{
+        marginLeft: 10
+      }} onClick={() => {
+        setEditingId(null);
+        setForm({
+          baslik: '',
+          kategori: '',
+          tarih: '',
+          ozet: '',
+          content: ''
+        });
+      }}>
             İptal
-          </button>
-        )}
+          </button>}
         {status && <p className={`status ${status.ok ? 'ok' : 'err'}`}>{status.msg}</p>}
       </form>
 
-      <div style={{ marginTop: 24 }}>
+      <div style={{
+      marginTop: 24
+    }}>
         {loading && <p className="status">Yazılar yükleniyor...</p>}
-        {!loading && posts.map((p) => (
-          <div className="admin-row" key={p.id}>
+        {!loading && posts.map(p => <div className="admin-row" key={p.id}>
             <div>
               <strong>{p.baslik || 'Başlıksız Yazı'}</strong>
               <div className="meta">{p.kategori} {p.tarih ? `· ${p.tarih}` : ''}</div>
             </div>
             <div>
               <button className="btn secondary" onClick={() => startEdit(p)}>Düzenle</button>
-              <button className="btn danger" style={{ marginLeft: 8 }} onClick={() => handleDelete(p.id)}>Sil</button>
+              <button className="btn danger" style={{
+            marginLeft: 8
+          }} onClick={() => handleDelete(p.id)}>Sil</button>
             </div>
-          </div>
-        ))}
+          </div>)}
         {!loading && posts.length === 0 && <p className="status">Henüz eklenmiş yazı yok.</p>}
       </div>
-    </div>
-  );
+    </div>;
 }
-
-function SiteSettingsAdmin({ password }) {
-  const [form, setForm] = useState({ hero_image_url: '', hero_image_caption: '' });
+function SiteSettingsAdmin({
+  password
+}) {
+  const [form, setForm] = useState({
+    hero_image_url: '',
+    hero_image_caption: ''
+  });
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
-    fetch('/api/admin/site-settings', { headers: authHeaders(password) })
-      .then((r) => r.json())
-      .then((d) =>
-        setForm({
-          hero_image_url: d?.hero_image_url || '',
-          hero_image_caption: d?.hero_image_caption || '',
-        })
-      )
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
+    fetch('/api/admin/site-settings', {
+      headers: authHeaders(password)
+    }).then(r => r.json()).then(d => setForm({
+      hero_image_url: d?.hero_image_url || '',
+      hero_image_caption: d?.hero_image_caption || ''
+    })).catch(err => console.error(err)).finally(() => setLoading(false));
   }, []); // eslint-disable-line
 
   async function save() {
@@ -1050,66 +1094,78 @@ function SiteSettingsAdmin({ password }) {
     const res = await fetch('/api/admin/site-settings', {
       method: 'PUT',
       headers: authHeaders(password),
-      body: JSON.stringify(form),
+      body: JSON.stringify(form)
     });
-    setStatus(res.ok ? { ok: true, msg: 'Kaydedildi.' } : { ok: false, msg: 'Hata oluştu.' });
+    setStatus(res.ok ? {
+      ok: true,
+      msg: 'Kaydedildi.'
+    } : {
+      ok: false,
+      msg: 'Hata oluştu.'
+    });
   }
-
-  return (
-    <div className="admin-section" style={{ marginTop: 40 }}>
-      <h2 style={{ fontFamily: 'var(--font-display)', marginTop: 0 }}>Ana Sayfa Görseli (Şerit)</h2>
-      <p className="status" style={{ marginTop: 0, marginBottom: 16 }}>
+  return <div className="admin-section" style={{
+    marginTop: 40
+  }}>
+      <h2 style={{
+      fontFamily: 'var(--font-display)',
+      marginTop: 0
+    }}>Ana Sayfa Görseli (Şerit)</h2>
+      <p className="status" style={{
+      marginTop: 0,
+      marginBottom: 16
+    }}>
         Ana sayfada, üst menünün hemen altında görünen fotoğraf şeridi. Boş
         bırakılırsa yerine sade bir yer tutucu gösterilir.
       </p>
-      {loading ? (
-        <p className="status">Yükleniyor...</p>
-      ) : (
-        <>
+      {loading ? <p className="status">Yükleniyor...</p> : <>
           <div className="field">
             <label>Görsel Adresi (URL)</label>
-            <input
-              value={form.hero_image_url}
-              onChange={(e) => setForm({ ...form, hero_image_url: e.target.value })}
-              placeholder="https://..."
-            />
+            <input value={form.hero_image_url} onChange={e => setForm({
+          ...form,
+          hero_image_url: e.target.value
+        })} placeholder="https://..." />
           </div>
           <div className="field">
             <label>Alt Yazı (opsiyonel)</label>
-            <input
-              value={form.hero_image_caption}
-              onChange={(e) => setForm({ ...form, hero_image_caption: e.target.value })}
-              placeholder="Örn: Enneadlar, İstanbul Üniversitesi Nüshası"
-            />
+            <input value={form.hero_image_caption} onChange={e => setForm({
+          ...form,
+          hero_image_caption: e.target.value
+        })} placeholder="Örn: Enneadlar, İstanbul Üniversitesi Nüshası" />
           </div>
-          {form.hero_image_url && (
-            <div style={{ marginBottom: 16, maxWidth: 420 }}>
-              <img
-                src={form.hero_image_url}
-                alt="Önizleme"
-                style={{ width: '100%', borderRadius: 6, border: '1px solid var(--line)' }}
-              />
-            </div>
-          )}
+          {form.hero_image_url && <div style={{
+        marginBottom: 16,
+        maxWidth: 420
+      }}>
+              <img src={form.hero_image_url} alt="Önizleme" style={{
+          width: '100%',
+          borderRadius: 6,
+          border: '1px solid var(--line)'
+        }} />
+            </div>}
           <button className="btn" onClick={save}>Kaydet</button>
           {status && <p className={`status ${status.ok ? 'ok' : 'err'}`}>{status.msg}</p>}
-        </>
-      )}
-    </div>
-  );
+        </>}
+    </div>;
 }
-
-function ContactAdmin({ password }) {
-  const [form, setForm] = useState({ email: '', telefon: '', sehir: '' });
+function ContactAdmin({
+  password
+}) {
+  const [form, setForm] = useState({
+    email: '',
+    telefon: '',
+    sehir: ''
+  });
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
-    fetch('/api/admin/contact', { headers: authHeaders(password) })
-      .then((r) => r.json())
-      .then((d) => setForm({ email: d?.email || '', telefon: d?.telefon || '', sehir: d?.sehir || '' }))
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
+    fetch('/api/admin/contact', {
+      headers: authHeaders(password)
+    }).then(r => r.json()).then(d => setForm({
+      email: d?.email || '',
+      telefon: d?.telefon || '',
+      sehir: d?.sehir || ''
+    })).catch(err => console.error(err)).finally(() => setLoading(false));
   }, []); // eslint-disable-line
 
   async function save() {
@@ -1117,36 +1173,49 @@ function ContactAdmin({ password }) {
     const res = await fetch('/api/admin/contact', {
       method: 'PUT',
       headers: authHeaders(password),
-      body: JSON.stringify(form),
+      body: JSON.stringify(form)
     });
-    setStatus(res.ok ? { ok: true, msg: 'Kaydedildi.' } : { ok: false, msg: 'Hata oluştu.' });
+    setStatus(res.ok ? {
+      ok: true,
+      msg: 'Kaydedildi.'
+    } : {
+      ok: false,
+      msg: 'Hata oluştu.'
+    });
   }
-
-  return (
-    <div className="admin-section" style={{ marginTop: 40 }}>
-      <h2 style={{ fontFamily: 'var(--font-display)', marginTop: 0 }}>İletişim Bilgileri</h2>
-      {loading ? (
-        <p className="status">Yükleniyor...</p>
-      ) : (
-        <>
+  return <div className="admin-section" style={{
+    marginTop: 40
+  }}>
+      <h2 style={{
+      fontFamily: 'var(--font-display)',
+      marginTop: 0
+    }}>İletişim Bilgileri</h2>
+      {loading ? <p className="status">Yükleniyor...</p> : <>
           <div className="grid grid-2">
             <div className="field">
               <label>E-posta</label>
-              <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              <input value={form.email} onChange={e => setForm({
+            ...form,
+            email: e.target.value
+          })} />
             </div>
             <div className="field">
               <label>Telefon</label>
-              <input value={form.telefon} onChange={(e) => setForm({ ...form, telefon: e.target.value })} />
+              <input value={form.telefon} onChange={e => setForm({
+            ...form,
+            telefon: e.target.value
+          })} />
             </div>
             <div className="field">
               <label>Şehir</label>
-              <input value={form.sehir} onChange={(e) => setForm({ ...form, sehir: e.target.value })} />
+              <input value={form.sehir} onChange={e => setForm({
+            ...form,
+            sehir: e.target.value
+          })} />
             </div>
           </div>
           <button className="btn" onClick={save}>Kaydet</button>
           {status && <p className={`status ${status.ok ? 'ok' : 'err'}`}>{status.msg}</p>}
-        </>
-      )}
-    </div>
-  );
+        </>}
+    </div>;
 }

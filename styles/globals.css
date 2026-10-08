@@ -39,7 +39,7 @@
   color-scheme: light;
 }
 
-/* Light theme için emanation etiketlerinin görünürlüğü */
+
 [data-theme='light'] .emanation-node-label span {
   color: #241f18;
   text-shadow: 
@@ -85,9 +85,7 @@ a {
   color: var(--ink);
 }
 
-/* =========================================================
-   CONTAINERS
-   ========================================================= */
+
 
 .container {
   max-width: 1040px;
@@ -101,9 +99,7 @@ a {
   padding: 0 28px;
 }
 
-/* =========================================================
-   NAV
-   ========================================================= */
+
 
 .nav {
   position: sticky;
@@ -152,7 +148,7 @@ a {
 }
 
 [data-theme='light'] .brand-logo {
-  /* Açık temada logo turkuazdan siyaha döner */
+  
   filter: brightness(0);
 }
 
@@ -197,27 +193,9 @@ a {
   background: var(--gold);
 }
 
-/* =========================================================
-   MODERN HERO
-   ========================================================= */
 
-/*
- * ÖNEMLİ YAPI
- *
- * Hero artık 180vh.
- *
- * İçerideki .modern-hero-inner ise sticky ve 100vh.
- *
- * Böylece:
- *
- * 0%   → Bir / merkez
- * 25%  → Nous
- * 50%  → Psyukhe
- * 75%  → Kozmos
- * 100% → bütün sistem açılmış
- *
- * kullanıcı scroll ettikçe sahne ilerliyor.
- */
+
+
 
 .modern-hero {
   position: relative;
@@ -261,9 +239,7 @@ a {
   isolation: isolate;
 }
 
-/* =========================================================
-   ATMOSFER
-   ========================================================= */
+
 
 .hero-noise {
   position: absolute;
@@ -348,9 +324,7 @@ a {
   }
 }
 
-/* =========================================================
-   EMANATION STAGE
-   ========================================================= */
+
 
 .emanation-stage {
   position: absolute;
@@ -366,9 +340,7 @@ a {
   pointer-events: none;
 }
 
-/* =========================================================
-   MERKEZDEN ÇIKAN HALKALAR
-   ========================================================= */
+
 
 .emanation-ring {
   position: absolute;
@@ -380,11 +352,7 @@ a {
 
   transform-origin: center center;
 
-  /*
-   * Scroll ölçeği JS tarafından veriliyor.
-   * CSS animasyonu transform'a dokunmuyor.
-   * Böylece iki animasyon birbirini ezmiyor.
-   */
+  
   transform:
     translate(-50%, -50%)
     scale(var(--ring-scroll, 1));
@@ -478,9 +446,7 @@ a {
   }
 }
 
-/* =========================================================
-   İÇ HALKALAR
-   ========================================================= */
+
 
 .emanation-ring-inner {
   position: absolute;
@@ -552,9 +518,7 @@ a {
   }
 }
 
-/* =========================================================
-   IŞIK DALGASI
-   ========================================================= */
+
 
 .emanation-pulse {
   position: absolute;
@@ -578,9 +542,7 @@ a {
 
   mix-blend-mode: screen;
 
-  /*
-   * Scroll genel başlangıç ölçeğini belirliyor.
-   */
+  
   transform:
     translate(0, 0)
     scale(var(--pulse-scroll, 0.72));
@@ -659,9 +621,7 @@ a {
   }
 }
 
-/* =========================================================
-   MERKEZ IŞIĞI
-   ========================================================= */
+
 
 .emanation-center-glow {
   position: absolute;
@@ -714,9 +674,7 @@ a {
   }
 }
 
-/* =========================================================
-   BİR
-   ========================================================= */
+
 
 .emanation-core {
   position: absolute;
@@ -843,9 +801,7 @@ a {
   }
 }
 
-/* =========================================================
-   KAVRAM ETİKETLERİ
-   ========================================================= */
+
 
 .emanation-node-label {
   position: absolute;
@@ -920,9 +876,7 @@ a {
   }
 }
 
-/* =========================================================
-   İNCE RADYAL IŞINLAR
-   ========================================================= */
+
 
 .emanation-ray {
   position: absolute;
@@ -996,9 +950,7 @@ a {
   }
 }
 
-/* =========================================================
-   SOL HERO METNİ
-   ========================================================= */
+
 
 .modern-hero-left {
   position: absolute;
@@ -1141,9 +1093,7 @@ a {
   }
 }
 
-/* =========================================================
-   SAĞ NAVİGASYON
-   ========================================================= */
+
 
 .modern-hero-right {
   position: absolute;
@@ -1278,9 +1228,7 @@ a {
   }
 }
 
-/* =========================================================
-   ALT SATIR
-   ========================================================= */
+
 
 .modern-hero-bottom {
   position: absolute;
@@ -1365,9 +1313,7 @@ a {
   }
 }
 
-/* =========================================================
-   SCROLL INDICATOR
-   ========================================================= */
+
 
 .hero-scroll-indicator {
   position: absolute;
@@ -1440,9 +1386,7 @@ a {
   }
 }
 
-/* =========================================================
-   DUYURU FOTOĞRAFI
-   ========================================================= */
+
 
 .modern-announcement {
   width: 100%;
@@ -1499,9 +1443,7 @@ a {
   letter-spacing: 0.08em;
 }
 
-/* =========================================================
-   ZOTERO
-   ========================================================= */
+
 
 .zotero-modern {
   padding:
@@ -1567,9 +1509,7 @@ a {
   background: var(--ink);
 }
 
-/* =========================================================
-   GENEL ESKİ HERO
-   ========================================================= */
+
 
 .hero {
   position: relative;
@@ -1664,9 +1604,7 @@ a {
   z-index: 1;
 }
 
-/* =========================================================
-   SECTION
-   ========================================================= */
+
 
 .section {
   padding:
@@ -1703,9 +1641,7 @@ a {
   max-width: 620px;
 }
 
-/* =========================================================
-   CARDS
-   ========================================================= */
+
 
 .card {
   background: var(--ink-soft);
@@ -1840,9 +1776,7 @@ a {
   color: var(--parchment);
 }
 
-/* =========================================================
-   PROSE
-   ========================================================= */
+
 
 .prose {
   font-size: 1.08rem;
@@ -1859,9 +1793,7 @@ a {
     0 0 1.2em;
 }
 
-/* =========================================================
-   CONTACT
-   ========================================================= */
+
 
 .contact-grid {
   display: grid;
@@ -1916,9 +1848,7 @@ a {
   font-size: 1.3rem;
 }
 
-/* =========================================================
-   FORMS
-   ========================================================= */
+
 
 .field {
   margin-bottom: 16px;
@@ -2073,9 +2003,7 @@ a {
   color: #c97b6b;
 }
 
-/* =========================================================
-   ADMIN
-   ========================================================= */
+
 
 .admin-panel {
   padding-top: 40px;
@@ -2114,9 +2042,7 @@ a {
   border-bottom: none;
 }
 
-/* =========================================================
-   FOOTER
-   ========================================================= */
+
 
 .footer {
   border-top:
@@ -2136,9 +2062,7 @@ a {
   letter-spacing: 0.08em;
 }
 
-/* =========================================================
-   TEMA
-   ========================================================= */
+
 
 .theme-toggle {
   display: inline-flex;
@@ -2178,9 +2102,7 @@ a {
   height: 15px;
 }
 
-/* =========================================================
-   PHOTO STRIP
-   ========================================================= */
+
 
 .photo-strip {
   border-top:
@@ -2274,9 +2196,7 @@ a {
   letter-spacing: 0.08em;
 }
 
-/* =========================================================
-   ESKİ HOME SINIFLARI
-   ========================================================= */
+
 
 .home-hero {
   position: relative;
@@ -2597,9 +2517,7 @@ a {
     cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* =========================================================
-   RESPONSIVE
-   ========================================================= */
+
 
 @media (max-width: 1100px) {
 
@@ -2639,11 +2557,7 @@ a {
     grid-template-columns: 1fr;
   }
 
-  /*
-   * Tablet: Hero height 100vh - daha kısa scroll gerekli
-   * Sol ve sağ içerik merkeze yakın fakat üst/alt
-   * bölgelere dağıtılıyor.
-   */
+  
 
   .modern-hero {
     height: 100vh;
@@ -2928,9 +2842,7 @@ a {
   }
 }
 
-/* =========================================================
-   HAREKET AZALTMA
-   ========================================================= */
+
 
 @media (prefers-reduced-motion: reduce) {
 
@@ -2952,7 +2864,7 @@ a {
       0.01ms !important;
   }
 }
-/* === Açık tema için soğuk mavi kontrast === */
+
 [data-theme='light'] .emanation-ring,
 [data-theme='light'] .emanation-ring-inner,
 [data-theme='light'] .emanation-pulse,
@@ -2977,7 +2889,7 @@ a {
   background: linear-gradient(to bottom, rgba(20, 40, 80, 0.45), transparent);
   opacity: 0.55;
 }
-/* === Açık tema için vurgulu soğuk mavi kontrast === */
+
 [data-theme='light'] .emanation-ring,
 [data-theme='light'] .emanation-ring-inner,
 [data-theme='light'] .emanation-pulse,
@@ -2998,28 +2910,28 @@ a {
   text-shadow: 0 0 18px rgba(15, 30, 60, 0.65);
 }
 
-/* Küçük etiket görünürlüğü */
+
 [data-theme='light'] .modern-badge {
   background: rgba(15, 30, 60, 0.08);
   border-color: rgba(15, 30, 60, 0.25);
   color: #0f1e3c;
 }
 
-/* İnce radyal ışınlar */
+
 [data-theme='light'] .emanation-ray {
   background: linear-gradient(to bottom, rgba(15, 30, 60, 0.55), transparent);
   opacity: 0.65;
 }
 
-/* === Her iki tema için sağ keşif bağlantılarını yukarı taşı === */
+
 .modern-hero-right {
   top: 25%;
 }
-/* Mobilde sağ boşlukları kaldır */
+
 @media (max-width: 768px) {
   .container,
   .container-wide {
-    padding: 0 12px; /* sağdan boşluk azalır */
+    padding: 0 12px; 
   }
 
   body {
@@ -3027,7 +2939,7 @@ a {
     padding: 0;
   }
 }
-/* Mobilde tam ekran dolması için düzeltme */
+
 html, body {
   width: 100%;
   overflow-x: hidden;
@@ -3055,13 +2967,10 @@ html, body {
   }
 }
 
-/* =========================================================
-   READER RENK TEMASI (tüm siteye uygula)
-   Bu blok en altta olduğu için üstteki tüm renkleri ezer.
-   ========================================================= */
+
 
 :root {
-  /* Dark mode – Reader mavimsi / lacivert */
+  
   --ink: #101415;
   --ink-soft: #171d1e;
   --parchment: #dde4e3;
@@ -3080,7 +2989,7 @@ html, body {
 }
 
 [data-theme='light'] {
-  /* Light mode – beyazımsı / soft */
+  
   --ink: #f4f7f7;
   --ink-soft: #ffffff;
   --parchment: #1a2222;
@@ -3098,7 +3007,7 @@ html, body {
   color-scheme: light;
 }
 
-/* Açık temada emanation efektlerini de yeni renge uyumlu yap */
+
 [data-theme='light'] .emanation-ring,
 [data-theme='light'] .emanation-ring-inner,
 [data-theme='light'] .emanation-pulse,
@@ -3128,4 +3037,76 @@ html, body {
   background: rgba(42, 157, 143, 0.08);
   border-color: rgba(42, 157, 143, 0.22);
   color: #1a2e2c;
+}
+
+.mobile-header { display: none; }
+.mobile-drawer { position: fixed; inset: 0 0 0 auto; margin: 0; width: min(360px, 90vw); max-width: none; height: 100dvh; max-height: none; padding: 26px 24px; color: var(--parchment); background: var(--ink); border: 0; border-left: 1px solid var(--line-strong); border-radius: 24px 0 0 24px; box-shadow: -24px 0 90px rgba(0,0,0,.25); }
+.mobile-drawer[open] { display: flex; flex-direction: column; animation: drawer-in .28s cubic-bezier(.2,.8,.2,1); }
+.mobile-drawer::backdrop { background: rgba(0,0,0,.48); backdrop-filter: blur(6px); }
+.mobile-drawer-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; font-family:var(--font-display); font-size:1.45rem; padding-bottom:26px; border-bottom:1px solid var(--line); }
+.mobile-drawer-heading button { color:var(--parchment); background:transparent; border:1px solid var(--line); border-radius:50%; width:44px; height:44px; font-size:1.5rem; cursor:pointer; }
+.mobile-drawer-links { display:flex; flex-direction:column; padding-top:24px; gap:8px; }
+.mobile-drawer-links a { display:grid; grid-template-columns:24px 1fr 16px; gap:12px; align-items:center; min-height:56px; padding:12px 14px; border-radius:12px; font-family:var(--font-body); color:var(--parchment); text-decoration:none; transition:background .2s,color .2s; }
+.mobile-drawer-links a[aria-current='page'] { color:var(--gold-bright); background:color-mix(in srgb,var(--gold) 12%,transparent); }
+.mobile-drawer-links a:hover { background:var(--ink-soft); }
+.mobile-link-number { font: .65rem var(--font-mono); opacity:.55; }
+.mobile-drawer-foot { margin-top:auto; padding-top:32px; font: .65rem var(--font-mono); color:var(--parchment-dim); }
+@keyframes drawer-in { from { transform:translateX(100%); opacity:.4; } to { transform:translateX(0); opacity:1; } }
+@media(max-width:1100px) {
+  .desktop-nav { display:none; }
+  .mobile-header { display:flex; position:sticky; top:0; z-index:60; justify-content:space-between; align-items:center; gap:12px; padding:12px 18px; background:var(--nav-bg); backdrop-filter:blur(18px); border-bottom:1px solid var(--line); }
+  .mobile-brand { display:flex; align-items:center; gap:9px; min-width:0; font:1.15rem var(--font-display); color:var(--parchment); text-decoration:none; }
+  .mobile-brand img { object-fit:contain; flex-shrink:0; }
+  [data-theme='light'] .mobile-brand img { filter:brightness(0); }
+  .mobile-header-actions { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+  .mobile-header .theme-toggle { width:44px; height:44px; margin:0; }
+  .mobile-menu-trigger { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; width:44px; height:44px; border:1px solid var(--line); border-radius:50%; background:transparent; color:var(--parchment); cursor:pointer; }
+  .mobile-menu-trigger span { width:16px; height:1px; background:currentColor; }
+}
+@media(max-width:780px) {
+  .modern-hero { height:auto; min-height:0; }
+  .modern-hero-inner { position:relative; top:auto; height:auto; min-height:0; padding:44px 20px 72px; display:flex; flex-direction:column; gap:26px; isolation:isolate; }
+  .modern-hero-left, .modern-hero-right { position:relative; inset:auto; width:100%; max-width:100%; transform:none; animation:none; }
+  .modern-hero-left { order:0; z-index:2; }
+  .modern-hero-right { order:2; z-index:2; margin-top:clamp(180px,48vw,300px); }
+  .modern-hero-left h1 { font-size:clamp(1.55rem,6.4vw,2.4rem); line-height:1.35; margin-bottom:0; }
+  .emanation-stage { top:48%; left:50%; width:1px; height:1px; pointer-events:none; }
+  .modern-hero-bottom, .hero-scroll-indicator { display:none; }
+  .modern-discover-link { min-height:54px; }
+  .container, .container-wide { min-width:0; }
+  .pagination, .pagination-nav { flex-wrap:wrap; }
+}
+@media(prefers-reduced-motion:reduce) { .mobile-drawer[open] { animation:none; } }
+
+.source-primary-tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:10px; }
+.source-primary-tags .tag { font-size:.62rem; padding:2px 6px; }
+.source-details { width:100%; margin:10px 0; font-size:.8rem; }
+.source-details summary { color:var(--gold-bright); cursor:pointer; font-family:var(--font-body); padding:4px 0; }
+.source-detail-tags { display:flex; flex-wrap:wrap; gap:5px; padding:12px 0 6px; }
+.source-detail-tags .tag { font-size:.62rem; }
+.source-bibliography { margin:8px 0; }
+.source-bibliography div { display:grid; grid-template-columns:1fr 1.5fr; gap:8px; padding:4px 0; }
+.source-bibliography dt { color:var(--parchment-dim); }
+.source-bibliography dd { margin:0; overflow-wrap:anywhere; }
+@media(max-width:780px) { .source-details summary { padding:10px 0; } }
+
+.source-card-footer { display:flex; flex-direction:column; align-items:stretch; margin-top:12px; }
+.source-card-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:12px; }
+.source-card-actions button,.source-card-actions a { background:transparent; border:0; border-bottom:1px dashed var(--line-strong); padding:0 0 2px; color:var(--gold-bright); font:.68rem var(--font-mono); text-decoration:none; cursor:pointer; }
+.source-card-actions button { color:var(--parchment-dim); }
+@media(max-width:780px) { .source-card-actions button,.source-card-actions a { display:inline-flex; align-items:center; min-height:44px; } }
+
+.catalogue-filter-disclosure>summary { display:none; }
+@media(max-width:799px) {
+  .catalogue-filter-disclosure { border:1px solid var(--line-strong); border-radius:12px; padding:0 12px; }
+  .catalogue-filter-disclosure>summary { display:flex; justify-content:space-between; align-items:center; gap:10px; min-height:52px; cursor:pointer; color:var(--gold-bright); font-size:.85rem; }
+  .catalogue-filter-disclosure>summary span { color:var(--parchment-dim); font-size:.7rem; }
+  .catalogue-filter-disclosure[open] { padding-bottom:16px; }
+}
+
+@media(max-width:780px) {
+.emanation-stage { top:56%; }
+.emanation-label-nous { top:-90px; left:-30px; }
+.emanation-label-psyche { top:40px; left:90px; }
+.emanation-label-cosmos { display:block; top:55px; left:-135px; }
 }

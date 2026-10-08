@@ -1,214 +1,134 @@
+import { fetchAllPaginated } from '../lib/fetchAllPaginated';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/supabaseClient';
-
-// ============================================================
-// SABİTLER
-// ============================================================
-
-const ENNEADS = [
-  { id: '1', number: '1', label: 'Birinci Ennead' },
-  { id: '2', number: '2', label: 'İkinci Ennead' },
-  { id: '3', number: '3', label: 'Üçüncü Ennead' },
-  { id: '4', number: '4', label: 'Dördüncü Ennead' },
-  { id: '5', number: '5', label: 'Beşinci Ennead' },
-  { id: '6', number: '6', label: 'Altıncı Ennead' },
-];
-
+const ENNEADS = [{
+  id: '1',
+  number: '1',
+  label: 'Birinci Ennead'
+}, {
+  id: '2',
+  number: '2',
+  label: 'İkinci Ennead'
+}, {
+  id: '3',
+  number: '3',
+  label: 'Üçüncü Ennead'
+}, {
+  id: '4',
+  number: '4',
+  label: 'Dördüncü Ennead'
+}, {
+  id: '5',
+  number: '5',
+  label: 'Beşinci Ennead'
+}, {
+  id: '6',
+  number: '6',
+  label: 'Altıncı Ennead'
+}];
 const PAGE_SIZE = 20;
 const SUPABASE_PAGE_SIZE = 1000;
 const RESULTS_PER_BATCH = 20;
-
-// ============================================================
-// SUPABASE PAGINATION
-// ============================================================
-
-async function fetchAllPaginated(buildQuery) {
-  const rows = [];
-  let from = 0;
-
-  while (true) {
-    const { data, error } = await buildQuery().range(
-      from,
-      from + SUPABASE_PAGE_SIZE - 1
-    );
-
-    if (error) {
-      throw error;
-    }
-
-    if (!data || data.length === 0) {
-      break;
-    }
-
-    rows.push(...data);
-
-    if (data.length < SUPABASE_PAGE_SIZE) {
-      break;
-    }
-
-    from += SUPABASE_PAGE_SIZE;
-  }
-
-  return rows;
-}
-
-// ============================================================
-// YARDIMCI FONKSİYONLAR
-// ============================================================
-
 function parseReference(reference) {
   if (!reference) return null;
-
   const parts = String(reference).split('.');
-
   if (parts.length !== 3) return null;
-
   return {
     ennead: parts[0],
     tractate: parts[1],
-    section: parts[2],
+    section: parts[2]
   };
 }
-
 function normalizeGreek(str) {
   if (!str) return '';
-
-  return String(str)
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/ς/g, 'σ')
-    .normalize('NFC');
+  return String(str).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/ς/g, 'σ').normalize('NFC');
 }
-
 function tokenizeGreek(text) {
   if (!text) return [];
-
-  const matches = String(text).match(
-    /[\p{L}\p{M}]+(?:[’'][\p{L}\p{M}]+)*/gu
-  );
-
+  const matches = String(text).match(/[\p{L}\p{M}]+(?:[’'][\p{L}\p{M}]+)*/gu);
   if (!matches) return [];
-
-  return matches.map((raw) => ({
+  return matches.map(raw => ({
     raw,
-    normalized: normalizeGreek(raw),
+    normalized: normalizeGreek(raw)
   }));
 }
-
 function cleanGreekWord(word) {
   if (!word) return '';
-
-  return String(word)
-    .replace(/[.,·;:!?()[\]{}"'«»“”‘’]/g, '')
-    .trim();
+  return String(word).replace(/[.,·;:!?()[\]{}"'«»“”‘’]/g, '').trim();
 }
-
 function expandSectionRefs(sectionRef) {
   if (!sectionRef) return [];
-
-  return String(sectionRef)
-    .split(',')
-    .map((r) => r.trim())
-    .filter(Boolean);
+  return String(sectionRef).split(',').map(r => r.trim()).filter(Boolean);
 }
-
 function compareReferences(a, b) {
   const pa = parseReference(a);
   const pb = parseReference(b);
-
   if (!pa || !pb) return 0;
-
   if (Number(pa.ennead) !== Number(pb.ennead)) {
     return Number(pa.ennead) - Number(pb.ennead);
   }
-
   if (Number(pa.tractate) !== Number(pb.tractate)) {
     return Number(pa.tractate) - Number(pb.tractate);
   }
-
   return Number(pa.section) - Number(pb.section);
 }
-
 function getPaginationItems(currentPage, totalPages) {
   if (totalPages <= 7) {
-    return Array.from({ length: totalPages }, (_, i) => i + 1);
+    return Array.from({
+      length: totalPages
+    }, (_, i) => i + 1);
   }
-
   if (currentPage <= 4) {
     return [1, 2, 3, 4, 5, 'ellipsis-end', totalPages];
   }
-
   if (currentPage >= totalPages - 3) {
-    return [
-      1,
-      'ellipsis-start',
-      totalPages - 4,
-      totalPages - 3,
-      totalPages - 2,
-      totalPages - 1,
-      totalPages,
-    ];
+    return [1, 'ellipsis-start', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
   }
-
-  return [
-    1,
-    'ellipsis-start',
-    currentPage - 1,
-    currentPage,
-    currentPage + 1,
-    'ellipsis-end',
-    totalPages,
-  ];
+  return [1, 'ellipsis-start', currentPage - 1, currentPage, currentPage + 1, 'ellipsis-end', totalPages];
 }
-
-// Perseus tarzı Yunanca (politonik) klavye düzeni
-const GREEK_KB_LETTERS = [
-  'α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ', 'λ', 'μ',
-  'ν', 'ξ', 'ο', 'π', 'ρ', 'σ', 'ς', 'τ', 'υ', 'φ', 'χ', 'ψ', 'ω',
-];
-
-const GREEK_KB_DIACRITICS = [
-  { label: '\u0301', char: '\u0301', title: 'Oksia (tonos)' },
-  { label: '\u0300', char: '\u0300', title: 'Varia' },
-  { label: '\u0342', char: '\u0342', title: 'Perispomeni' },
-  { label: '\u2019', char: '\u0313', title: 'Yumuşak nefes (psili)' },
-  { label: '\u02BD', char: '\u0314', title: 'Sert nefes (dasia)' },
-  { label: '\u00A8', char: '\u0308', title: 'Dialytika' },
-  { label: 'ͺ', char: '\u0345', title: 'Iota subscript' },
-];
-
-// ============================================================
-// ANA COMPONENT
-// ============================================================
-
+const GREEK_KB_LETTERS = ['α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ', 'λ', 'μ', 'ν', 'ξ', 'ο', 'π', 'ρ', 'σ', 'ς', 'τ', 'υ', 'φ', 'χ', 'ψ', 'ω'];
+const GREEK_KB_DIACRITICS = [{
+  label: '\u0301',
+  char: '\u0301',
+  title: 'Oksia (tonos)'
+}, {
+  label: '\u0300',
+  char: '\u0300',
+  title: 'Varia'
+}, {
+  label: '\u0342',
+  char: '\u0342',
+  title: 'Perispomeni'
+}, {
+  label: '\u2019',
+  char: '\u0313',
+  title: 'Yumuşak nefes (psili)'
+}, {
+  label: '\u02BD',
+  char: '\u0314',
+  title: 'Sert nefes (dasia)'
+}, {
+  label: '\u00A8',
+  char: '\u0308',
+  title: 'Dialytika'
+}, {
+  label: 'ͺ',
+  char: '\u0345',
+  title: 'Iota subscript'
+}];
 export default function PlotinusReader() {
   const [selectedEnnead, setSelectedEnnead] = useState(null);
   const [selectedTractate, setSelectedTractate] = useState(null);
   const [selectedSections, setSelectedSections] = useState([]);
-
   const [readerLanguage, setReaderLanguage] = useState('both');
-
   const [allTexts, setAllTexts] = useState([]);
   const [tractates, setTractates] = useState([]);
   const [sections, setSections] = useState([]);
   const [passages, setPassages] = useState([]);
-
   const [loading, setLoading] = useState(true);
-
-  // ----------------------------------------------------------
-  // GLOBAL ARAMA
-  // ----------------------------------------------------------
-
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
-  const [globalVisibleResultCount, setGlobalVisibleResultCount] =
-    useState(RESULTS_PER_BATCH);
-
-  // ----------------------------------------------------------
-  // LEMMA / KÖK SÖZCÜK ARAMASI
-  // ----------------------------------------------------------
-
+  const [globalVisibleResultCount, setGlobalVisibleResultCount] = useState(RESULTS_PER_BATCH);
   const [searchQuery, setSearchQuery] = useState('');
   const [lexicalResults, setLexicalResults] = useState([]);
   const [lexicalLoading, setLexicalLoading] = useState(false);
@@ -216,50 +136,26 @@ export default function PlotinusReader() {
   const [lexicalForms, setLexicalForms] = useState([]);
   const [lexicalLemma, setLexicalLemma] = useState(null);
   const [lexicalSource, setLexicalSource] = useState(null);
-
-  // ----------------------------------------------------------
-  // DEVAMINI GÖSTER
-  // ----------------------------------------------------------
-
-  const [visibleResultCount, setVisibleResultCount] =
-    useState(RESULTS_PER_BATCH);
-
-  // ----------------------------------------------------------
-  // DİĞER
-  // ----------------------------------------------------------
-
+  const [visibleResultCount, setVisibleResultCount] = useState(RESULTS_PER_BATCH);
   const [currentPage, setCurrentPage] = useState(1);
   const [showSectionGrid, setShowSectionGrid] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
-
   const [pendingScroll, setPendingScroll] = useState(null);
-
   const topRef = useRef(null);
-
   const [showGreekKeyboard, setShowGreekKeyboard] = useState(false);
   const searchInputRef = useRef(null);
-
-  const insertGreekChar = (char) => {
+  const insertGreekChar = char => {
     const input = searchInputRef.current;
-
     if (!input) {
-      setSearchQuery((prev) => (prev + char).normalize('NFC'));
+      setSearchQuery(prev => (prev + char).normalize('NFC'));
       return;
     }
-
     const start = input.selectionStart ?? searchQuery.length;
     const end = input.selectionEnd ?? searchQuery.length;
-
-    const nextValue = (
-      searchQuery.slice(0, start) +
-      char +
-      searchQuery.slice(end)
-    ).normalize('NFC');
-
+    const nextValue = (searchQuery.slice(0, start) + char + searchQuery.slice(end)).normalize('NFC');
     setSearchQuery(nextValue);
     setCurrentPage(1);
     setVisibleResultCount(RESULTS_PER_BATCH);
-
     requestAnimationFrame(() => {
       if (!searchInputRef.current) return;
       const caret = start + 1;
@@ -267,29 +163,18 @@ export default function PlotinusReader() {
       searchInputRef.current.setSelectionRange(caret, caret);
     });
   };
-
   const [showGreekKeyboardGlobal, setShowGreekKeyboardGlobal] = useState(false);
   const globalSearchInputRef = useRef(null);
-
-  const insertGreekCharGlobal = (char) => {
+  const insertGreekCharGlobal = char => {
     const input = globalSearchInputRef.current;
-
     if (!input) {
-      setGlobalSearchQuery((prev) => (prev + char).normalize('NFC'));
+      setGlobalSearchQuery(prev => (prev + char).normalize('NFC'));
       return;
     }
-
     const start = input.selectionStart ?? globalSearchQuery.length;
     const end = input.selectionEnd ?? globalSearchQuery.length;
-
-    const nextValue = (
-      globalSearchQuery.slice(0, start) +
-      char +
-      globalSearchQuery.slice(end)
-    ).normalize('NFC');
-
+    const nextValue = (globalSearchQuery.slice(0, start) + char + globalSearchQuery.slice(end)).normalize('NFC');
     setGlobalSearchQuery(nextValue);
-
     requestAnimationFrame(() => {
       if (!globalSearchInputRef.current) return;
       const caret = start + 1;
@@ -297,621 +182,285 @@ export default function PlotinusReader() {
       globalSearchInputRef.current.setSelectionRange(caret, caret);
     });
   };
-
-  // ==========================================================
-  // DİL AYARI
-  // ==========================================================
-
   useEffect(() => {
     const savedLang = localStorage.getItem('reader-language');
-
     if (savedLang) {
       setReaderLanguage(savedLang);
     }
   }, []);
-
-  const handleLanguageChange = (lang) => {
+  const handleLanguageChange = lang => {
     setReaderLanguage(lang);
     localStorage.setItem('reader-language', lang);
   };
-
-  // ==========================================================
-  // SCROLL
-  // ==========================================================
-
   useEffect(() => {
     const handleScroll = () => {
       setShowScrollTop(window.scrollY > 400);
     };
-
     window.addEventListener('scroll', handleScroll);
-
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
-
-  // ==========================================================
-  // TÜM PLOTINUS METİNLERİNİ ÇEK
-  // ==========================================================
-
   useEffect(() => {
     async function fetchAllTexts() {
       setLoading(true);
-
       try {
-        const data = await fetchAllPaginated(() =>
-          supabase
-            .from('canonical_texts')
-            .select(
-              'id, author, work, reference, greek_text, english_text, translator, sort_order'
-            )
-            .eq('author', 'Plotinus')
-            .eq('work', 'Enneades')
-            .order('sort_order', { ascending: true })
-        );
-
-        console.log(
-          'Plotinus verileri Supabase\'den çekildi:',
-          data.length
-        );
-
+        const data = await fetchAllPaginated(() => supabase.from('canonical_texts').select('id, author, work, reference, greek_text, english_text, translator, sort_order').eq('author', 'Plotinus').eq('work', 'Enneades').order('sort_order', {
+          ascending: true
+        }));
+        console.log('Plotinus verileri Supabase\'den çekildi:', data.length);
         setAllTexts(data);
       } catch (error) {
-        console.error(
-          'Plotinus metinleri çekilemedi:',
-          error
-        );
-
+        console.error('Plotinus metinleri çekilemedi:', error);
         setAllTexts([]);
       } finally {
         setLoading(false);
       }
     }
-
     fetchAllTexts();
   }, []);
-
-  // ==========================================================
-  // ENNEAD → TRAKTATLAR
-  // ==========================================================
-
   useEffect(() => {
     if (!selectedEnnead) {
       setTractates([]);
       return;
     }
-
-    const ennead = ENNEADS.find(
-      (item) => item.id === selectedEnnead
-    );
-
+    const ennead = ENNEADS.find(item => item.id === selectedEnnead);
     if (!ennead) {
       setTractates([]);
       return;
     }
-
-    const enneadTexts = allTexts.filter((item) => {
+    const enneadTexts = allTexts.filter(item => {
       const parsed = parseReference(item.reference);
-
-      return (
-        parsed &&
-        parsed.ennead === ennead.number
-      );
+      return parsed && parsed.ennead === ennead.number;
     });
-
     const seen = new Set();
     const uniqueTractates = [];
-
-    enneadTexts.forEach((item) => {
+    enneadTexts.forEach(item => {
       const parsed = parseReference(item.reference);
-
       if (!parsed || seen.has(parsed.tractate)) {
         return;
       }
-
       seen.add(parsed.tractate);
-
       uniqueTractates.push({
         id: parsed.tractate,
-        title: `Traktat ${parsed.tractate}`,
+        title: `Traktat ${parsed.tractate}`
       });
     });
-
-    uniqueTractates.sort(
-      (a, b) => Number(a.id) - Number(b.id)
-    );
-
+    uniqueTractates.sort((a, b) => Number(a.id) - Number(b.id));
     setTractates(uniqueTractates);
   }, [selectedEnnead, allTexts]);
-
-  // ==========================================================
-  // TRAKTAT → SECTION'LAR
-  // ==========================================================
-
   useEffect(() => {
     if (!selectedEnnead || !selectedTractate) {
       setSections([]);
       return;
     }
-
-    const ennead = ENNEADS.find(
-      (item) => item.id === selectedEnnead
-    );
-
+    const ennead = ENNEADS.find(item => item.id === selectedEnnead);
     if (!ennead) {
       setSections([]);
       return;
     }
-
-    const tractateTexts = allTexts.filter((item) => {
+    const tractateTexts = allTexts.filter(item => {
       const parsed = parseReference(item.reference);
-
-      return (
-        parsed &&
-        parsed.ennead === ennead.number &&
-        parsed.tractate === String(selectedTractate)
-      );
+      return parsed && parsed.ennead === ennead.number && parsed.tractate === String(selectedTractate);
     });
-
     const uniqueSections = [];
     const seen = new Set();
-
-    tractateTexts.forEach((item) => {
+    tractateTexts.forEach(item => {
       if (!item.reference || seen.has(item.reference)) {
         return;
       }
-
       seen.add(item.reference);
       uniqueSections.push(item.reference);
     });
-
     uniqueSections.sort(compareReferences);
-
     setSections(uniqueSections);
   }, [selectedEnnead, selectedTractate, allTexts]);
-
-  // ==========================================================
-  // SEÇİLEN SECTION'LAR → PASSAGES
-  // ==========================================================
-
   useEffect(() => {
     if (selectedSections.length === 0) {
       setPassages([]);
       return;
     }
-
-    const result = allTexts.filter((item) =>
-      selectedSections.includes(item.reference)
-    );
-
-    result.sort((a, b) =>
-      compareReferences(a.reference, b.reference)
-    );
-
+    const result = allTexts.filter(item => selectedSections.includes(item.reference));
+    result.sort((a, b) => compareReferences(a.reference, b.reference));
     setPassages(result);
     setCurrentPage(1);
   }, [selectedSections, allTexts]);
-
-  // ==========================================================
-  // PENDING SCROLL
-  // ==========================================================
-
   useEffect(() => {
     if (!pendingScroll || passages.length === 0) {
       return;
     }
-
-    const idx = passages.findIndex(
-      (p) => p.reference === pendingScroll
-    );
-
+    const idx = passages.findIndex(p => p.reference === pendingScroll);
     if (idx !== -1) {
-      const targetPage =
-        Math.floor(idx / PAGE_SIZE) + 1;
-
+      const targetPage = Math.floor(idx / PAGE_SIZE) + 1;
       setCurrentPage(targetPage);
-
       const refToScroll = pendingScroll;
-
       setTimeout(() => {
-        const el = document.getElementById(
-          `ref-${refToScroll}`
-        );
-
+        const el = document.getElementById(`ref-${refToScroll}`);
         if (el) {
           el.scrollIntoView({
             behavior: 'smooth',
-            block: 'center',
+            block: 'center'
           });
         }
       }, 200);
     }
-
     setPendingScroll(null);
   }, [passages, pendingScroll]);
-
-  // ==========================================================
-  // GLOBAL ARAMA
-  // ==========================================================
-
   const globalSearchResults = useMemo(() => {
-    if (
-      !globalSearchQuery.trim() ||
-      allTexts.length === 0
-    ) {
+    if (!globalSearchQuery.trim() || allTexts.length === 0) {
       return [];
     }
-
     const q = globalSearchQuery.trim().toLowerCase();
-
-    return allTexts.filter((item) => {
-      return (
-        String(item.reference || '')
-          .toLowerCase()
-          .includes(q) ||
-        String(item.greek_text || '')
-          .toLowerCase()
-          .includes(q) ||
-        String(item.english_text || '')
-          .toLowerCase()
-          .includes(q)
-      );
+    return allTexts.filter(item => {
+      return String(item.reference || '').toLowerCase().includes(q) || String(item.greek_text || '').toLowerCase().includes(q) || String(item.english_text || '').toLowerCase().includes(q);
     });
   }, [globalSearchQuery, allTexts]);
-
-  const visibleGlobalSearchResults =
-    globalSearchResults.slice(
-      0,
-      globalVisibleResultCount
-    );
-
+  const visibleGlobalSearchResults = globalSearchResults.slice(0, globalVisibleResultCount);
   const showMoreGlobalResults = () => {
-    setGlobalVisibleResultCount(
-      (count) => count + RESULTS_PER_BATCH
-    );
+    setGlobalVisibleResultCount(count => count + RESULTS_PER_BATCH);
   };
-
-  // ==========================================================
-  // GLOBAL ARAMA DEĞİŞİNCE GÖRÜNÜR SONUÇLARI SIFIRLA
-  // ==========================================================
-
   useEffect(() => {
-    setGlobalVisibleResultCount(
-      RESULTS_PER_BATCH
-    );
+    setGlobalVisibleResultCount(RESULTS_PER_BATCH);
   }, [globalSearchQuery]);
-
-  // ==========================================================
-  // LEMMA / FORM ÇÖZÜMLEME
-  // ==========================================================
-
   async function resolveLexicalForms(rawQuery) {
     const originalQuery = String(rawQuery || '').trim();
-
-    const normalizedQuery =
-      normalizeGreek(originalQuery);
-
+    const normalizedQuery = normalizeGreek(originalQuery);
     if (!normalizedQuery) {
       return {
         forms: [],
         lemma: null,
         lemmaKey: null,
-        source: null,
+        source: null
       };
     }
-
     const rows = [];
-
-    // --------------------------------------------------------
-    // 1. lemma_key doğrudan aranıyor
-    // --------------------------------------------------------
-
     let keyRows = [];
-
     try {
-      keyRows = await fetchAllPaginated(() =>
-        supabase
-          .from('plato_lexicon_test')
-          .select(
-            'lemma, form, lemma_key, lemma_unaccented, form_unaccented'
-          )
-          .eq('work', 'Enneades')
-          .eq('lemma_key', originalQuery)
-      );
+      keyRows = await fetchAllPaginated(() => supabase.from('plato_lexicon_test').select('lemma, form, lemma_key, lemma_unaccented, form_unaccented').eq('work', 'Enneades').eq('lemma_key', originalQuery));
     } catch (error) {
-      console.error(
-        'lemma_key sorgusu başarısız:',
-        error
-      );
+      console.error('lemma_key sorgusu başarısız:', error);
     }
-
     if (keyRows.length > 0) {
       rows.push(...keyRows);
     }
-
-    // --------------------------------------------------------
-    // 2. Aksansız lemma aranıyor
-    // --------------------------------------------------------
-
     let lemmaRows = [];
-
     try {
-      lemmaRows = await fetchAllPaginated(() =>
-        supabase
-          .from('plato_lexicon_test')
-          .select(
-            'lemma, form, lemma_key, lemma_unaccented, form_unaccented'
-          )
-          .eq('work', 'Enneades')
-          .eq('lemma_unaccented', normalizedQuery)
-      );
+      lemmaRows = await fetchAllPaginated(() => supabase.from('plato_lexicon_test').select('lemma, form, lemma_key, lemma_unaccented, form_unaccented').eq('work', 'Enneades').eq('lemma_unaccented', normalizedQuery));
     } catch (error) {
-      console.error(
-        'lemma_unaccented sorgusu başarısız:',
-        error
-      );
+      console.error('lemma_unaccented sorgusu başarısız:', error);
     }
-
     if (lemmaRows.length > 0) {
       rows.push(...lemmaRows);
     }
-
-    // --------------------------------------------------------
-    // 3. Aksansız form aranıyor
-    // --------------------------------------------------------
-
     let formRows = [];
-
     try {
-      formRows = await fetchAllPaginated(() =>
-        supabase
-          .from('plato_lexicon_test')
-          .select(
-            'lemma, form, lemma_key, lemma_unaccented, form_unaccented'
-          )
-          .eq('work', 'Enneades')
-          .eq('form_unaccented', normalizedQuery)
-      );
+      formRows = await fetchAllPaginated(() => supabase.from('plato_lexicon_test').select('lemma, form, lemma_key, lemma_unaccented, form_unaccented').eq('work', 'Enneades').eq('form_unaccented', normalizedQuery));
     } catch (error) {
-      console.error(
-        'form_unaccented sorgusu başarısız:',
-        error
-      );
+      console.error('form_unaccented sorgusu başarısız:', error);
     }
-
     if (formRows.length > 0) {
       rows.push(...formRows);
     }
-
-    // --------------------------------------------------------
-    // Tekilleştir
-    // --------------------------------------------------------
-
     const uniqueRows = [];
     const seen = new Set();
-
-    rows.forEach((row) => {
-      const key = [
-        row.lemma || '',
-        row.form || '',
-        row.lemma_key || '',
-      ].join('|');
-
+    rows.forEach(row => {
+      const key = [row.lemma || '', row.form || '', row.lemma_key || ''].join('|');
       if (seen.has(key)) return;
-
       seen.add(key);
       uniqueRows.push(row);
     });
-
-    // --------------------------------------------------------
-    // lemma_key bul
-    // --------------------------------------------------------
-
-    const lemmaKeyRow = uniqueRows.find(
-      (row) =>
-        row.lemma_key !== null &&
-        row.lemma_key !== undefined &&
-        String(row.lemma_key).trim() !== ''
-    );
-
-    const lemmaKey = lemmaKeyRow
-      ? String(lemmaKeyRow.lemma_key).trim()
-      : null;
-
-    // --------------------------------------------------------
-    // lemma_key varsa TÜM FORMLARI çek
-    // --------------------------------------------------------
-
+    const lemmaKeyRow = uniqueRows.find(row => row.lemma_key !== null && row.lemma_key !== undefined && String(row.lemma_key).trim() !== '');
+    const lemmaKey = lemmaKeyRow ? String(lemmaKeyRow.lemma_key).trim() : null;
     let finalRows = uniqueRows;
-
     if (lemmaKey) {
       let allLemmaRows = [];
-
       try {
-        allLemmaRows = await fetchAllPaginated(() =>
-          supabase
-            .from('plato_lexicon_test')
-            .select(
-              'lemma, form, lemma_key, lemma_unaccented, form_unaccented'
-            )
-            .eq('work', 'Enneades')
-            .eq('lemma_key', lemmaKey)
-        );
+        allLemmaRows = await fetchAllPaginated(() => supabase.from('plato_lexicon_test').select('lemma, form, lemma_key, lemma_unaccented, form_unaccented').eq('work', 'Enneades').eq('lemma_key', lemmaKey));
       } catch (error) {
-        console.error(
-          'Tüm lemma formları çekilemedi:',
-          error
-        );
+        console.error('Tüm lemma formları çekilemedi:', error);
       }
-
       if (allLemmaRows.length > 0) {
         finalRows = allLemmaRows;
       }
     }
-
-    // --------------------------------------------------------
-    // Formları oluştur
-    // --------------------------------------------------------
-
     const formMap = new Map();
-
-    finalRows.forEach((row) => {
-      const possibleValues = [
-        row.form,
-        row.lemma,
-      ];
-
-      possibleValues.forEach((value) => {
+    finalRows.forEach(row => {
+      const possibleValues = [row.form, row.lemma];
+      possibleValues.forEach(value => {
         if (!value) return;
-
         const normalized = normalizeGreek(value);
-
         if (!normalized) return;
-
         if (!formMap.has(normalized)) {
           formMap.set(normalized, value);
         }
       });
     });
-
     const forms = Array.from(formMap.values());
-
-    // --------------------------------------------------------
-    // Lemma ismi
-    // --------------------------------------------------------
-
-    const lemma =
-      finalRows.find((row) => row.lemma)?.lemma ||
-      lemmaKeyRow?.lemma ||
-      null;
-
-    // --------------------------------------------------------
-    // Sonuç
-    // --------------------------------------------------------
-
+    const lemma = finalRows.find(row => row.lemma)?.lemma || lemmaKeyRow?.lemma || null;
     if (forms.length > 0) {
       return {
         forms,
         lemma,
         lemmaKey,
-        source: lemmaKey
-          ? 'lemma_key'
-          : 'lexicon',
+        source: lemmaKey ? 'lemma_key' : 'lexicon'
       };
     }
-
-    // --------------------------------------------------------
-    // FALLBACK
-    // --------------------------------------------------------
-
     return {
       forms: [originalQuery],
       lemma: null,
       lemmaKey: null,
-      source: 'corpus',
+      source: 'corpus'
     };
   }
-
-  // ==========================================================
-  // CORPUS'TA GERÇEK OCCURRENCE TARAMASI
-  // ==========================================================
-
   function searchCorpusByForms(forms) {
     if (!forms || forms.length === 0) {
       return {
         results: [],
-        total: 0,
+        total: 0
       };
     }
-
     const targetForms = new Map();
-
-    forms.forEach((form) => {
+    forms.forEach(form => {
       const normalized = normalizeGreek(form);
-
       if (!normalized) return;
-
       if (!targetForms.has(normalized)) {
         targetForms.set(normalized, form);
       }
     });
-
     const resultMap = new Map();
     let total = 0;
-
-    allTexts.forEach((item) => {
+    allTexts.forEach(item => {
       if (!item.greek_text) return;
-
-      const tokens = tokenizeGreek(
-        item.greek_text
-      );
-
+      const tokens = tokenizeGreek(item.greek_text);
       if (tokens.length === 0) return;
-
       const formCounts = new Map();
-
-      tokens.forEach((token) => {
-        const matchedForm =
-          targetForms.get(token.normalized);
-
+      tokens.forEach(token => {
+        const matchedForm = targetForms.get(token.normalized);
         if (!matchedForm) return;
-
-        const normalizedMatched =
-          normalizeGreek(matchedForm);
-
-        formCounts.set(
-          normalizedMatched,
-          (formCounts.get(normalizedMatched) || 0) + 1
-        );
-
+        const normalizedMatched = normalizeGreek(matchedForm);
+        formCounts.set(normalizedMatched, (formCounts.get(normalizedMatched) || 0) + 1);
         total += 1;
       });
-
       if (formCounts.size === 0) return;
-
-      const formsInPassage = Array.from(
-        formCounts.entries()
-      ).map(([normalized, count]) => ({
-        form:
-          targetForms.get(normalized) ||
-          normalized,
-        count,
+      const formsInPassage = Array.from(formCounts.entries()).map(([normalized, count]) => ({
+        form: targetForms.get(normalized) || normalized,
+        count
       }));
-
       resultMap.set(item.reference, {
         id: item.id,
         reference: item.reference,
-        total: formsInPassage.reduce(
-          (sum, item) => sum + item.count,
-          0
-        ),
-        forms: formsInPassage,
+        total: formsInPassage.reduce((sum, item) => sum + item.count, 0),
+        forms: formsInPassage
       });
     });
-
-    const results = Array.from(
-      resultMap.values()
-    ).sort((a, b) =>
-      compareReferences(
-        a.reference,
-        b.reference
-      )
-    );
-
+    const results = Array.from(resultMap.values()).sort((a, b) => compareReferences(a.reference, b.reference));
     return {
       results,
-      total,
+      total
     };
   }
-
-  // ==========================================================
-  // LEMMA ARAMA EFFECT
-  // ==========================================================
-
   useEffect(() => {
     const query = searchQuery.trim();
-
     if (!query) {
       setLexicalResults([]);
       setLexicalTotal(0);
@@ -922,63 +471,29 @@ export default function PlotinusReader() {
       setVisibleResultCount(RESULTS_PER_BATCH);
       return;
     }
-
     let cancelled = false;
-
     const timer = setTimeout(async () => {
       setLexicalLoading(true);
-
       try {
-        const resolved =
-          await resolveLexicalForms(query);
-
+        const resolved = await resolveLexicalForms(query);
         if (cancelled) return;
-
-        const corpusResults =
-          searchCorpusByForms(
-            resolved.forms
-          );
-
+        const corpusResults = searchCorpusByForms(resolved.forms);
         if (cancelled) return;
-
-        setLexicalResults(
-          corpusResults.results
-        );
-
-        setLexicalTotal(
-          corpusResults.total
-        );
-
-        setLexicalForms(
-          resolved.forms
-        );
-
-        setLexicalLemma(
-          resolved.lemma
-        );
-
-        setLexicalSource(
-          resolved.source
-        );
-
-        setVisibleResultCount(
-          RESULTS_PER_BATCH
-        );
+        setLexicalResults(corpusResults.results);
+        setLexicalTotal(corpusResults.total);
+        setLexicalForms(resolved.forms);
+        setLexicalLemma(resolved.lemma);
+        setLexicalSource(resolved.source);
+        setVisibleResultCount(RESULTS_PER_BATCH);
       } catch (error) {
-        console.error(
-          'Lemma araması sırasında hata:',
-          error
-        );
-
+        console.error('Lemma araması sırasında hata:', error);
         if (!cancelled) {
           setLexicalResults([]);
           setLexicalTotal(0);
           setLexicalForms([]);
           setLexicalLemma(null);
           setLexicalSource('corpus');
-          setVisibleResultCount(
-            RESULTS_PER_BATCH
-          );
+          setVisibleResultCount(RESULTS_PER_BATCH);
         }
       } finally {
         if (!cancelled) {
@@ -986,300 +501,151 @@ export default function PlotinusReader() {
         }
       }
     }, 300);
-
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
   }, [searchQuery, allTexts]);
-
-  // ==========================================================
-  // GÖRÜNÜR LEXICAL SONUÇLARI
-  // ==========================================================
-
-  const visibleLexicalResults =
-    lexicalResults.slice(
-      0,
-      visibleResultCount
-    );
-
+  const visibleLexicalResults = lexicalResults.slice(0, visibleResultCount);
   const showMoreResults = () => {
-    setVisibleResultCount(
-      (count) =>
-        count + RESULTS_PER_BATCH
-    );
+    setVisibleResultCount(count => count + RESULTS_PER_BATCH);
   };
-
-  // ==========================================================
-  // ARAMA DEĞİŞİNCE SIFIRLA
-  // ==========================================================
-
   useEffect(() => {
-    setVisibleResultCount(
-      RESULTS_PER_BATCH
-    );
+    setVisibleResultCount(RESULTS_PER_BATCH);
   }, [searchQuery]);
-
-  // ==========================================================
-  // LEXICAL RESULT → PASSAGE
-  // ==========================================================
-
-  const goToLexicalResult = (result) => {
-    const parsed = parseReference(
-      result.reference
-    );
-
+  const goToLexicalResult = result => {
+    const parsed = parseReference(result.reference);
     if (!parsed) return;
-
     setSearchQuery('');
-
     setLexicalResults([]);
     setLexicalTotal(0);
     setLexicalForms([]);
     setLexicalLemma(null);
     setLexicalSource(null);
-    setVisibleResultCount(
-      RESULTS_PER_BATCH
-    );
-
-    setPendingScroll(
-      result.reference
-    );
-
-    setSelectedEnnead(
-      parsed.ennead
-    );
-
-    setSelectedTractate(
-      parsed.tractate
-    );
-
-    setSelectedSections([
-      result.reference,
-    ]);
-
+    setVisibleResultCount(RESULTS_PER_BATCH);
+    setPendingScroll(result.reference);
+    setSelectedEnnead(parsed.ennead);
+    setSelectedTractate(parsed.tractate);
+    setSelectedSections([result.reference]);
     setShowSectionGrid(false);
-
     window.scrollTo({
       top: 0,
-      behavior: 'smooth',
+      behavior: 'smooth'
     });
   };
-
-  // ==========================================================
-  // NAVIGATION
-  // ==========================================================
-
   const resetAll = () => {
     setSelectedEnnead(null);
     setSelectedTractate(null);
     setSelectedSections([]);
-
     setTractates([]);
     setSections([]);
     setPassages([]);
-
     setSearchQuery('');
     setGlobalSearchQuery('');
-
     setLexicalResults([]);
     setLexicalTotal(0);
     setLexicalForms([]);
     setLexicalLemma(null);
     setLexicalSource(null);
-
-    setVisibleResultCount(
-      RESULTS_PER_BATCH
-    );
-
-    setGlobalVisibleResultCount(
-      RESULTS_PER_BATCH
-    );
-
+    setVisibleResultCount(RESULTS_PER_BATCH);
+    setGlobalVisibleResultCount(RESULTS_PER_BATCH);
     setCurrentPage(1);
     setShowSectionGrid(false);
   };
-
   const handleBackToEnneads = () => {
     resetAll();
   };
-
   const handleBackToTractates = () => {
     setSelectedTractate(null);
     setSelectedSections([]);
-
     setSections([]);
     setPassages([]);
-
     setSearchQuery('');
-
     setLexicalResults([]);
     setLexicalTotal(0);
     setLexicalForms([]);
     setLexicalLemma(null);
     setLexicalSource(null);
-
-    setVisibleResultCount(
-      RESULTS_PER_BATCH
-    );
-
+    setVisibleResultCount(RESULTS_PER_BATCH);
     setCurrentPage(1);
     setShowSectionGrid(false);
   };
-
   const handleBackToSections = () => {
     setSelectedSections([]);
     setPassages([]);
-
     setSearchQuery('');
-
     setLexicalResults([]);
     setLexicalTotal(0);
     setLexicalForms([]);
     setLexicalLemma(null);
     setLexicalSource(null);
-
-    setVisibleResultCount(
-      RESULTS_PER_BATCH
-    );
-
+    setVisibleResultCount(RESULTS_PER_BATCH);
     setCurrentPage(1);
     setShowSectionGrid(false);
   };
-
-  // ==========================================================
-  // GLOBAL ARAMAYA GERİ DÖN
-  // ==========================================================
-
   const handleBackToGlobalSearch = () => {
     setSelectedEnnead(null);
     setSelectedTractate(null);
     setSelectedSections([]);
-
     setTractates([]);
     setSections([]);
     setPassages([]);
-
     setSearchQuery('');
-
     setLexicalResults([]);
     setLexicalTotal(0);
     setLexicalForms([]);
     setLexicalLemma(null);
     setLexicalSource(null);
-
-    setVisibleResultCount(
-      RESULTS_PER_BATCH
-    );
-
+    setVisibleResultCount(RESULTS_PER_BATCH);
     setCurrentPage(1);
     setShowSectionGrid(false);
-
     window.scrollTo({
       top: 0,
-      behavior: 'smooth',
+      behavior: 'smooth'
     });
   };
-
-  const toggleSection = (reference) => {
-    setSelectedSections((prev) => {
+  const toggleSection = reference => {
+    setSelectedSections(prev => {
       if (prev.includes(reference)) {
-        return prev.filter(
-          (r) => r !== reference
-        );
+        return prev.filter(r => r !== reference);
       }
-
       return [...prev, reference];
     });
   };
-
-  // ==========================================================
-  // GLOBAL SEARCH RESULT
-  // ==========================================================
-
-  const goToGlobalResult = (item) => {
-    const parsed = parseReference(
-      item.reference
-    );
-
+  const goToGlobalResult = item => {
+    const parsed = parseReference(item.reference);
     if (!parsed) return;
-
-    setSelectedEnnead(
-      parsed.ennead
-    );
-
-    setSelectedTractate(
-      parsed.tractate
-    );
-
-    setSelectedSections([
-      item.reference,
-    ]);
-
-    // ÖNEMLİ:
-    // globalSearchQuery artık temizlenmiyor.
-    // Böylece arama ekranına geri dönülebiliyor.
-
+    setSelectedEnnead(parsed.ennead);
+    setSelectedTractate(parsed.tractate);
+    setSelectedSections([item.reference]);
     setShowSectionGrid(false);
-
     window.scrollTo({
       top: 0,
-      behavior: 'smooth',
+      behavior: 'smooth'
     });
   };
-
-  // ==========================================================
-  // PAGINATION
-  // ==========================================================
-
-  const totalPages = Math.ceil(
-    passages.length / PAGE_SIZE
-  );
-
-  const paginationItems = useMemo(
-    () => getPaginationItems(currentPage, totalPages),
-    [currentPage, totalPages]
-  );
-
-  const currentPassages =
-    passages.slice(
-      (currentPage - 1) * PAGE_SIZE,
-      currentPage * PAGE_SIZE
-    );
-
-  const handlePageChange = (page) => {
+  const totalPages = Math.ceil(passages.length / PAGE_SIZE);
+  const paginationItems = useMemo(() => getPaginationItems(currentPage, totalPages), [currentPage, totalPages]);
+  const currentPassages = passages.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const handlePageChange = page => {
     setCurrentPage(page);
-
     window.scrollTo({
       top: 0,
-      behavior: 'smooth',
+      behavior: 'smooth'
     });
   };
-
   const scrollToTop = () => {
     window.scrollTo({
       top: 0,
-      behavior: 'smooth',
+      behavior: 'smooth'
     });
   };
+  return <Layout>
+      <div className="rdr-page" ref={topRef}>
 
-  // ==========================================================
-  // RENDER
-  // ==========================================================
+        
 
-  return (
-    <Layout>
-      <div
-        className="rdr-page"
-        ref={topRef}
-      >
-
-        {/* ====================================================
-            ANA ENNEAD SEÇİMİ
-        ==================================================== */}
-
-        {!selectedEnnead && (
-          <div className="container rdr-select">
+        {!selectedEnnead && <div className="container rdr-select">
 
             <h1 className="rdr-title">
               Okumak istediğiniz{' '}
@@ -1290,199 +656,92 @@ export default function PlotinusReader() {
               Plotinus — Enneades
             </div>
 
-            {/* GLOBAL SEARCH */}
+            
 
             <div className="rdr-global-search-row">
               <div className="rdr-global-search">
-                <input
-                  ref={globalSearchInputRef}
-                  type="text"
-                  placeholder="Tüm Ennead’lerde ara (kelime veya cümle)..."
-                  value={globalSearchQuery}
-                  onChange={(e) =>
-                    setGlobalSearchQuery(
-                      e.target.value
-                    )
-                  }
-                />
+                <input ref={globalSearchInputRef} type="text" placeholder="Tüm Ennead’lerde ara (kelime veya cümle)..." value={globalSearchQuery} onChange={e => setGlobalSearchQuery(e.target.value)} />
 
-                {globalSearchQuery && (
-                  <button
-                    className="rdr-search-clear"
-                    onClick={() =>
-                      setGlobalSearchQuery('')
-                    }
-                  >
+                {globalSearchQuery && <button className="rdr-search-clear" onClick={() => setGlobalSearchQuery('')}>
                     ✕
-                  </button>
-                )}
+                  </button>}
               </div>
 
-              <button
-                type="button"
-                className={`rdr-greek-kb-toggle ${
-                  showGreekKeyboardGlobal ? 'active' : ''
-                }`}
-                onClick={() =>
-                  setShowGreekKeyboardGlobal((v) => !v)
-                }
-                title="Yunanca klavyeyi göster/gizle"
-                aria-label="Yunanca klavyeyi göster/gizle"
-              >
+              <button type="button" className={`rdr-greek-kb-toggle ${showGreekKeyboardGlobal ? 'active' : ''}`} onClick={() => setShowGreekKeyboardGlobal(v => !v)} title="Yunanca klavyeyi göster/gizle" aria-label="Yunanca klavyeyi göster/gizle">
                 Ελ
               </button>
             </div>
 
-            {showGreekKeyboardGlobal && (
-              <div className="rdr-greek-kb rdr-greek-kb-global">
+            {showGreekKeyboardGlobal && <div className="rdr-greek-kb rdr-greek-kb-global">
                 <div className="rdr-greek-kb-row">
-                  {GREEK_KB_LETTERS.map((ch) => (
-                    <button
-                      key={ch}
-                      type="button"
-                      className="rdr-greek-kb-key"
-                      onClick={() => insertGreekCharGlobal(ch)}
-                    >
+                  {GREEK_KB_LETTERS.map(ch => <button key={ch} type="button" className="rdr-greek-kb-key" onClick={() => insertGreekCharGlobal(ch)}>
                       {ch}
-                    </button>
-                  ))}
+                    </button>)}
                 </div>
 
                 <div className="rdr-greek-kb-row rdr-greek-kb-row-diacritics">
-                  {GREEK_KB_DIACRITICS.map((d) => (
-                    <button
-                      key={d.char}
-                      type="button"
-                      className="rdr-greek-kb-key rdr-greek-kb-key-diacritic"
-                      title={d.title}
-                      onClick={() => insertGreekCharGlobal(d.char)}
-                    >
+                  {GREEK_KB_DIACRITICS.map(d => <button key={d.char} type="button" className="rdr-greek-kb-key rdr-greek-kb-key-diacritic" title={d.title} onClick={() => insertGreekCharGlobal(d.char)}>
                       {d.label}
-                    </button>
-                  ))}
+                    </button>)}
 
-                  <button
-                    type="button"
-                    className="rdr-greek-kb-key rdr-greek-kb-key-wide"
-                    onClick={() => {
-                      setGlobalSearchQuery('');
-                      globalSearchInputRef.current?.focus();
-                    }}
-                  >
+                  <button type="button" className="rdr-greek-kb-key rdr-greek-kb-key-wide" onClick={() => {
+              setGlobalSearchQuery('');
+              globalSearchInputRef.current?.focus();
+            }}>
                     Temizle
                   </button>
                 </div>
-              </div>
-            )}
+              </div>}
 
-            {globalSearchQuery.trim() ? (
-              <div className="rdr-global-results">
+            {globalSearchQuery.trim() ? <div className="rdr-global-results">
 
-                {globalSearchResults.length === 0 ? (
-                  <div className="rdr-loading">
+                {globalSearchResults.length === 0 ? <div className="rdr-loading">
                     Sonuç bulunamadı.
-                  </div>
-                ) : (
-                  <>
+                  </div> : <>
 
                     <div className="rdr-results-count">
-                      {globalSearchResults.length.toLocaleString(
-                        'tr-TR'
-                      )}{' '}
+                      {globalSearchResults.length.toLocaleString('tr-TR')}{' '}
                       sonuç bulundu
                     </div>
 
-                    {visibleGlobalSearchResults.map(
-                      (item) => (
-                        <button
-                          key={item.id}
-                          className="rdr-global-result-item"
-                          onClick={() =>
-                            goToGlobalResult(
-                              item
-                            )
-                          }
-                        >
+                    {visibleGlobalSearchResults.map(item => <button key={item.id} className="rdr-global-result-item" onClick={() => goToGlobalResult(item)}>
                           <span className="rdr-result-ref">
                             {item.reference}
                           </span>
 
                           <span className="rdr-result-preview">
-                            {(
-                              item.english_text ||
-                              item.greek_text ||
-                              ''
-                            )
-                              .slice(0, 120)
-                              .replace(
-                                /\s+/g,
-                                ' '
-                              )}
+                            {(item.english_text || item.greek_text || '').slice(0, 120).replace(/\s+/g, ' ')}
                             ...
                           </span>
-                        </button>
-                      )
-                    )}
+                        </button>)}
 
-                    {/* GLOBAL SEARCH DEVAMINI GÖSTER */}
+                    
 
-                    {globalVisibleResultCount <
-                      globalSearchResults.length && (
-                      <div className="rdr-show-more">
+                    {globalVisibleResultCount < globalSearchResults.length && <div className="rdr-show-more">
 
-                        <button
-                          type="button"
-                          onClick={
-                            showMoreGlobalResults
-                          }
-                          className="rdr-show-more-btn"
-                        >
+                        <button type="button" onClick={showMoreGlobalResults} className="rdr-show-more-btn">
                           Devamını Göster
 
                           <span>
-                            {Math.min(
-                              RESULTS_PER_BATCH,
-                              globalSearchResults.length -
-                                globalVisibleResultCount
-                            )}{' '}
+                            {Math.min(RESULTS_PER_BATCH, globalSearchResults.length - globalVisibleResultCount)}{' '}
                             sonuç
                           </span>
                         </button>
 
-                      </div>
-                    )}
+                      </div>}
 
-                  </>
-                )}
+                  </>}
 
-              </div>
-            ) : loading ? (
-              <div className="rdr-loading">
+              </div> : loading ? <div className="rdr-loading">
                 Metinler yükleniyor...
-              </div>
-            ) : (
-              <div className="rdr-grid-enneads">
+              </div> : <div className="rdr-grid-enneads">
 
-                {ENNEADS.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                      setSelectedEnnead(
-                        item.id
-                      );
-
-                      setSelectedTractate(
-                        null
-                      );
-
-                      setSelectedSections(
-                        []
-                      );
-
-                      setPassages([]);
-                    }}
-                    className="rdr-ennead-card"
-                  >
+                {ENNEADS.map(item => <button key={item.id} onClick={() => {
+            setSelectedEnnead(item.id);
+            setSelectedTractate(null);
+            setSelectedSections([]);
+            setPassages([]);
+          }} className="rdr-ennead-card">
                     <span className="rdr-ennead-num">
                       {item.id}
                     </span>
@@ -1490,31 +749,19 @@ export default function PlotinusReader() {
                     <span className="rdr-ennead-label">
                       {item.label}
                     </span>
-                  </button>
-                ))}
+                  </button>)}
 
-              </div>
-            )}
+              </div>}
 
-          </div>
-        )}
+          </div>}
 
-        {/* ====================================================
-            TRAKTAT SEÇİMİ
-        ==================================================== */}
+        
 
-        {selectedEnnead &&
-          !selectedTractate && (
-            <div className="container rdr-select">
+        {selectedEnnead && !selectedTractate && <div className="container rdr-select">
 
               <div className="rdr-nav-header">
 
-                <button
-                  onClick={
-                    handleBackToEnneads
-                  }
-                  className="rdr-back"
-                >
+                <button onClick={handleBackToEnneads} className="rdr-back">
                   ‹ Ennead Listesi
                 </button>
 
@@ -1525,48 +772,23 @@ export default function PlotinusReader() {
 
               </div>
 
-              {loading ? (
-                <div className="rdr-loading">
+              {loading ? <div className="rdr-loading">
                   Metinler yükleniyor...
-                </div>
-              ) : tractates.length > 0 ? (
+                </div> : tractates.length > 0 ? <div className="rdr-index">
 
-                <div className="rdr-index">
-
-                  {tractates.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        setSelectedTractate(
-                          item.id
-                        );
-
-                        setSelectedSections(
-                          []
-                        );
-
-                        setPassages([]);
-
-                        setSearchQuery('');
-
-                        setLexicalResults([]);
-
-                        setLexicalTotal(0);
-
-                        setLexicalForms([]);
-
-                        setLexicalLemma(null);
-
-                        setLexicalSource(null);
-
-                        setVisibleResultCount(
-                          RESULTS_PER_BATCH
-                        );
-
-                        setCurrentPage(1);
-                      }}
-                      className="rdr-index-row"
-                    >
+                  {tractates.map(item => <button key={item.id} onClick={() => {
+            setSelectedTractate(item.id);
+            setSelectedSections([]);
+            setPassages([]);
+            setSearchQuery('');
+            setLexicalResults([]);
+            setLexicalTotal(0);
+            setLexicalForms([]);
+            setLexicalLemma(null);
+            setLexicalSource(null);
+            setVisibleResultCount(RESULTS_PER_BATCH);
+            setCurrentPage(1);
+          }} className="rdr-index-row">
                       <span className="rdr-index-num">
                         {selectedEnnead}.
                         {item.id}
@@ -1575,38 +797,22 @@ export default function PlotinusReader() {
                       <span className="rdr-index-name">
                         {item.title}
                       </span>
-                    </button>
-                  ))}
+                    </button>)}
 
-                </div>
-
-              ) : (
-                <div className="rdr-loading">
+                </div> : <div className="rdr-loading">
                   Bu Ennead için traktat
                   bulunamadı.
-                </div>
-              )}
+                </div>}
 
-            </div>
-          )}
+            </div>}
 
-        {/* ====================================================
-            SECTION SEÇİMİ
-        ==================================================== */}
+        
 
-        {selectedEnnead &&
-          selectedTractate &&
-          selectedSections.length === 0 && (
-            <div className="container rdr-select">
+        {selectedEnnead && selectedTractate && selectedSections.length === 0 && <div className="container rdr-select">
 
               <div className="rdr-nav-header">
 
-                <button
-                  onClick={
-                    handleBackToTractates
-                  }
-                  className="rdr-back"
-                >
+                <button onClick={handleBackToTractates} className="rdr-back">
                   ‹ Traktat Listesi
                 </button>
 
@@ -1624,89 +830,42 @@ export default function PlotinusReader() {
 
               </div>
 
-              {sections.length > 0 ? (
-                <>
+              {sections.length > 0 ? <>
 
                   <div className="rdr-section-list">
 
-                    {sections.map(
-                      (section) => (
-                        <button
-                          key={section}
-                          onClick={() =>
-                            toggleSection(
-                              section
-                            )
-                          }
-                          className={`rdr-section-btn ${
-                            selectedSections.includes(
-                              section
-                            )
-                              ? 'selected'
-                              : ''
-                          }`}
-                        >
+                    {sections.map(section => <button key={section} onClick={() => toggleSection(section)} className={`rdr-section-btn ${selectedSections.includes(section) ? 'selected' : ''}`}>
                           {section}
-                        </button>
-                      )
-                    )}
+                        </button>)}
 
                   </div>
 
-                  {selectedSections.length >
-                    0 && (
-                    <div className="rdr-multi-actions">
+                  {selectedSections.length > 0 && <div className="rdr-multi-actions">
 
-                      <button
-                        className="rdr-btn-primary"
-                        onClick={() =>
-                          setShowSectionGrid(
-                            false
-                          )
-                        }
-                      >
+                      <button className="rdr-btn-primary" onClick={() => setShowSectionGrid(false)}>
                         Seçilenleri Oku (
-                        {
-                          selectedSections.length
-                        }
+                        {selectedSections.length}
                         )
                       </button>
 
-                      <button
-                        className="rdr-btn-secondary"
-                        onClick={() =>
-                          setSelectedSections(
-                            []
-                          )
-                        }
-                      >
+                      <button className="rdr-btn-secondary" onClick={() => setSelectedSections([])}>
                         Seçimi Temizle
                       </button>
 
-                    </div>
-                  )}
+                    </div>}
 
-                </>
-              ) : (
-                <div className="rdr-loading">
+                </> : <div className="rdr-loading">
                   Bu traktat için bölüm
                   bulunamadı.
-                </div>
-              )}
+                </div>}
 
-            </div>
-          )}
+            </div>}
 
-        {/* ====================================================
-            OKUMA EKRANI
-        ==================================================== */}
+        
 
-        {selectedEnnead &&
-          selectedTractate &&
-          selectedSections.length > 0 && (
-            <div className="container-wide rdr-reading">
+        {selectedEnnead && selectedTractate && selectedSections.length > 0 && <div className="container-wide rdr-reading">
 
-              {/* HEADER */}
+              
 
               <div className="rdr-header-bar">
 
@@ -1730,51 +889,15 @@ export default function PlotinusReader() {
                     GÖRÜNÜM:
                   </span>
 
-                  <button
-                    className={`rdr-lang-opt ${
-                      readerLanguage ===
-                      'greek'
-                        ? 'active'
-                        : ''
-                    }`}
-                    onClick={() =>
-                      handleLanguageChange(
-                        'greek'
-                      )
-                    }
-                  >
+                  <button className={`rdr-lang-opt ${readerLanguage === 'greek' ? 'active' : ''}`} onClick={() => handleLanguageChange('greek')}>
                     Ελληνικά
                   </button>
 
-                  <button
-                    className={`rdr-lang-opt ${
-                      readerLanguage ===
-                      'english'
-                        ? 'active'
-                        : ''
-                    }`}
-                    onClick={() =>
-                      handleLanguageChange(
-                        'english'
-                      )
-                    }
-                  >
+                  <button className={`rdr-lang-opt ${readerLanguage === 'english' ? 'active' : ''}`} onClick={() => handleLanguageChange('english')}>
                     English
                   </button>
 
-                  <button
-                    className={`rdr-lang-opt ${
-                      readerLanguage ===
-                      'both'
-                        ? 'active'
-                        : ''
-                    }`}
-                    onClick={() =>
-                      handleLanguageChange(
-                        'both'
-                      )
-                    }
-                  >
+                  <button className={`rdr-lang-opt ${readerLanguage === 'both' ? 'active' : ''}`} onClick={() => handleLanguageChange('both')}>
                     Ελληνικά + English
                   </button>
 
@@ -1782,38 +905,21 @@ export default function PlotinusReader() {
 
               </div>
 
-              {/* TOOLBAR */}
+              
 
               <div className="rdr-toolbar">
 
                 <div className="rdr-toolbar-left">
 
-                  {globalSearchQuery.trim() ? (
-                    <button
-                      onClick={
-                        handleBackToGlobalSearch
-                      }
-                      className="rdr-back"
-                    >
+                  {globalSearchQuery.trim() ? <button onClick={handleBackToGlobalSearch} className="rdr-back">
                       ‹ Arama Sonuçlarına Dön
-                    </button>
-                  ) : (
-                    <button
-                      onClick={
-                        handleBackToSections
-                      }
-                      className="rdr-back"
-                    >
+                    </button> : <button onClick={handleBackToSections} className="rdr-back">
                       ‹ Bölüm Seçimi
-                    </button>
-                  )}
+                    </button>}
 
                   <div>
                     <h1 className="rdr-work-title">
-                      {selectedSections.length ===
-                      1
-                        ? selectedSections[0]
-                        : `${selectedSections.length} bölüm seçili`}
+                      {selectedSections.length === 1 ? selectedSections[0] : `${selectedSections.length} bölüm seçili`}
                     </h1>
                   </div>
 
@@ -1821,128 +927,60 @@ export default function PlotinusReader() {
 
                 <div className="rdr-toolbar-right">
 
-                  {sections.length > 0 && (
-                    <button
-                      className={`rdr-btn-fihrist ${
-                        showSectionGrid
-                          ? 'active'
-                          : ''
-                      }`}
-                      onClick={() =>
-                        setShowSectionGrid(
-                          !showSectionGrid
-                        )
-                      }
-                    >
+                  {sections.length > 0 && <button className={`rdr-btn-fihrist ${showSectionGrid ? 'active' : ''}`} onClick={() => setShowSectionGrid(!showSectionGrid)}>
                       Bölüm İndeksi
-                    </button>
-                  )}
+                    </button>}
 
-                  {/* ==================================================
-                      LEMMA ARAMA KUTUSU
-                  ================================================== */}
+                  
 
                   <div className="rdr-search-box">
 
                     <div className="rdr-search-input-wrap">
-                      <input
-                        ref={searchInputRef}
-                        type="text"
-                        placeholder="Lemma / kök sözcük ara..."
-                        value={searchQuery}
-                        onChange={(e) => {
-                          setSearchQuery(
-                            e.target.value
-                          );
+                      <input ref={searchInputRef} type="text" placeholder="Lemma / kök sözcük ara..." value={searchQuery} onChange={e => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                  setVisibleResultCount(RESULTS_PER_BATCH);
+                }} />
 
-                          setCurrentPage(1);
-
-                          setVisibleResultCount(
-                            RESULTS_PER_BATCH
-                          );
-                        }}
-                      />
-
-                      {searchQuery && (
-                        <button
-                          className="rdr-search-clear"
-                          onClick={() =>
-                            setSearchQuery('')
-                          }
-                        >
+                      {searchQuery && <button className="rdr-search-clear" onClick={() => setSearchQuery('')}>
                           ✕
-                        </button>
-                      )}
+                        </button>}
                     </div>
 
-                    <button
-                      type="button"
-                      className={`rdr-greek-kb-toggle ${
-                        showGreekKeyboard ? 'active' : ''
-                      }`}
-                      onClick={() =>
-                        setShowGreekKeyboard((v) => !v)
-                      }
-                      title="Yunanca klavyeyi göster/gizle"
-                      aria-label="Yunanca klavyeyi göster/gizle"
-                    >
+                    <button type="button" className={`rdr-greek-kb-toggle ${showGreekKeyboard ? 'active' : ''}`} onClick={() => setShowGreekKeyboard(v => !v)} title="Yunanca klavyeyi göster/gizle" aria-label="Yunanca klavyeyi göster/gizle">
                       Ελ
                     </button>
 
                   </div>
 
-                  {showGreekKeyboard && (
-                    <div className="rdr-greek-kb">
+                  {showGreekKeyboard && <div className="rdr-greek-kb">
                       <div className="rdr-greek-kb-row">
-                        {GREEK_KB_LETTERS.map((ch) => (
-                          <button
-                            key={ch}
-                            type="button"
-                            className="rdr-greek-kb-key"
-                            onClick={() => insertGreekChar(ch)}
-                          >
+                        {GREEK_KB_LETTERS.map(ch => <button key={ch} type="button" className="rdr-greek-kb-key" onClick={() => insertGreekChar(ch)}>
                             {ch}
-                          </button>
-                        ))}
+                          </button>)}
                       </div>
 
                       <div className="rdr-greek-kb-row rdr-greek-kb-row-diacritics">
-                        {GREEK_KB_DIACRITICS.map((d) => (
-                          <button
-                            key={d.char}
-                            type="button"
-                            className="rdr-greek-kb-key rdr-greek-kb-key-diacritic"
-                            title={d.title}
-                            onClick={() => insertGreekChar(d.char)}
-                          >
+                        {GREEK_KB_DIACRITICS.map(d => <button key={d.char} type="button" className="rdr-greek-kb-key rdr-greek-kb-key-diacritic" title={d.title} onClick={() => insertGreekChar(d.char)}>
                             {d.label}
-                          </button>
-                        ))}
+                          </button>)}
 
-                        <button
-                          type="button"
-                          className="rdr-greek-kb-key rdr-greek-kb-key-wide"
-                          onClick={() => {
-                            setSearchQuery('');
-                            searchInputRef.current?.focus();
-                          }}
-                        >
+                        <button type="button" className="rdr-greek-kb-key rdr-greek-kb-key-wide" onClick={() => {
+                  setSearchQuery('');
+                  searchInputRef.current?.focus();
+                }}>
                           Temizle
                         </button>
                       </div>
-                    </div>
-                  )}
+                    </div>}
 
                 </div>
 
               </div>
 
-              {/* ==================================================
-                  SECTION INDEX
-              ================================================== */}
+              
 
-              {showSectionGrid && (
-                <div className="rdr-stephanus-grid">
+              {showSectionGrid && <div className="rdr-stephanus-grid">
 
                   <div className="rdr-grid-title">
                     Bölüme Hızlı Git / Çoklu
@@ -1951,78 +989,36 @@ export default function PlotinusReader() {
 
                   <div className="rdr-grid-items">
 
-                    {sections.map(
-                      (section) => (
-                        <button
-                          key={section}
-                          className={`rdr-grid-chip ${
-                            selectedSections.includes(
-                              section
-                            )
-                              ? 'active'
-                              : ''
-                          }`}
-                          onClick={() =>
-                            toggleSection(
-                              section
-                            )
-                          }
-                        >
+                    {sections.map(section => <button key={section} className={`rdr-grid-chip ${selectedSections.includes(section) ? 'active' : ''}`} onClick={() => toggleSection(section)}>
                           {section}
-                        </button>
-                      )
-                    )}
+                        </button>)}
 
                   </div>
 
-                  {selectedSections.length >
-                    0 && (
-                    <div
-                      className="rdr-multi-actions"
-                      style={{
-                        marginTop: 12,
-                      }}
-                    >
-                      <button
-                        className="rdr-btn-secondary"
-                        onClick={() =>
-                          setSelectedSections(
-                            []
-                          )
-                        }
-                      >
+                  {selectedSections.length > 0 && <div className="rdr-multi-actions" style={{
+            marginTop: 12
+          }}>
+                      <button className="rdr-btn-secondary" onClick={() => setSelectedSections([])}>
                         Seçimi Temizle
                       </button>
-                    </div>
-                  )}
+                    </div>}
 
-                </div>
-              )}
+                </div>}
 
-              {/* ==================================================
-                  LEMMA ARAMA SONUÇLARI
-              ================================================== */}
+              
 
-              {searchQuery.trim() ? (
+              {searchQuery.trim() ? <div className="rdr-lexical-search-results">
 
-                <div className="rdr-lexical-search-results">
-
-                  {lexicalLoading ? (
-
-                    <div className="rdr-loading">
+                  {lexicalLoading ? <div className="rdr-loading">
                       Sözcük aranıyor…
-                    </div>
-
-                  ) : (
-                    <>
+                    </div> : <>
 
                       <div className="rdr-lexical-summary">
 
                         <div className="rdr-lexical-summary-main">
 
                           <span className="rdr-lexical-query">
-                            {lexicalLemma ||
-                              searchQuery}
+                            {lexicalLemma || searchQuery}
                           </span>
 
                           <span className="rdr-lexical-total">
@@ -2037,27 +1033,17 @@ export default function PlotinusReader() {
 
                         </div>
 
-                        {lexicalSource && (
-                          <div className="rdr-lexical-source">
+                        {lexicalSource && <div className="rdr-lexical-source">
 
-                            {lexicalSource ===
-                            'lemma_key'
-                              ? 'Lemma eşleştirmesi kullanıldı'
-                              : lexicalSource ===
-                                'lexicon'
-                              ? 'Lexicon eşleştirmesi kullanıldı'
-                              : 'Doğrudan Yunanca metin tarandı'}
+                            {lexicalSource === 'lemma_key' ? 'Lemma eşleştirmesi kullanıldı' : lexicalSource === 'lexicon' ? 'Lexicon eşleştirmesi kullanıldı' : 'Doğrudan Yunanca metin tarandı'}
 
-                          </div>
-                        )}
+                          </div>}
 
                       </div>
 
-                      {/* FORMLAR */}
+                      
 
-                      {lexicalForms.length >
-                        0 && (
-                        <div className="rdr-lexical-forms">
+                      {lexicalForms.length > 0 && <div className="rdr-lexical-forms">
 
                           <span className="rdr-lexical-forms-label">
                             Biçimler:
@@ -2065,28 +1051,17 @@ export default function PlotinusReader() {
 
                           <div className="rdr-lexical-form-list">
 
-                            {lexicalForms.map(
-                              (form) => (
-                                <span
-                                  key={form}
-                                  className="rdr-lexical-form"
-                                >
+                            {lexicalForms.map(form => <span key={form} className="rdr-lexical-form">
                                   {form}
-                                </span>
-                              )
-                            )}
+                                </span>)}
 
                           </div>
 
-                        </div>
-                      )}
+                        </div>}
 
-                      {/* SONUÇ YOK */}
+                      
 
-                      {lexicalResults.length ===
-                      0 ? (
-
-                        <div className="rdr-no-lexical-results">
+                      {lexicalResults.length === 0 ? <div className="rdr-no-lexical-results">
 
                           <div className="rdr-no-results-symbol">
                             ∅
@@ -2106,27 +1081,11 @@ export default function PlotinusReader() {
                             </p>
                           </div>
 
-                        </div>
-
-                      ) : (
-
-                        <>
+                        </div> : <>
 
                           <div className="rdr-lexical-result-list">
 
-                            {visibleLexicalResults.map(
-                              (result) => (
-                                <button
-                                  key={
-                                    result.reference
-                                  }
-                                  className="rdr-lexical-result"
-                                  onClick={() =>
-                                    goToLexicalResult(
-                                      result
-                                    )
-                                  }
-                                >
+                            {visibleLexicalResults.map(result => <button key={result.reference} className="rdr-lexical-result" onClick={() => goToLexicalResult(result)}>
 
                                   <div className="rdr-lexical-result-ref">
                                     {result.reference}
@@ -2141,255 +1100,121 @@ export default function PlotinusReader() {
 
                                     <span className="rdr-lexical-result-forms">
 
-                                      {result.forms.map(
-                                        (
-                                          form,
-                                          index
-                                        ) => (
-                                          <span
-                                            key={`${result.reference}-${form.form}-${index}`}
-                                            className="rdr-result-form"
-                                          >
+                                      {result.forms.map((form, index) => <span key={`${result.reference}-${form.form}-${index}`} className="rdr-result-form">
                                             {form.form}
-                                            {form.count >
-                                              1 &&
-                                              ` ×${form.count}`}
-                                          </span>
-                                        )
-                                      )}
+                                            {form.count > 1 && ` ×${form.count}`}
+                                          </span>)}
 
                                     </span>
 
                                   </div>
 
-                                </button>
-                              )
-                            )}
+                                </button>)}
 
                           </div>
 
-                          {/* ==================================================
-                              DEVAMINI GÖSTER
-                          ================================================== */}
+                          
 
-                          {visibleResultCount <
-                            lexicalResults.length && (
-                            <div className="rdr-show-more">
+                          {visibleResultCount < lexicalResults.length && <div className="rdr-show-more">
 
-                              <button
-                                type="button"
-                                onClick={
-                                  showMoreResults
-                                }
-                                className="rdr-show-more-btn"
-                              >
+                              <button type="button" onClick={showMoreResults} className="rdr-show-more-btn">
                                 Devamını Göster
 
                                 <span>
-                                  {Math.min(
-                                    RESULTS_PER_BATCH,
-                                    lexicalResults.length -
-                                      visibleResultCount
-                                  )}{' '}
+                                  {Math.min(RESULTS_PER_BATCH, lexicalResults.length - visibleResultCount)}{' '}
                                   sonuç
                                 </span>
                               </button>
 
-                            </div>
-                          )}
+                            </div>}
 
-                        </>
+                        </>}
 
-                      )}
+                    </>}
 
-                    </>
-                  )}
-
-                </div>
-
-              ) : (
-
-                /* ==================================================
-                   NORMAL READER
-                ================================================== */
-
-                <>
-                  {passages.length === 0 ? (
-                    <div className="rdr-loading">
+                </div> : <>
+                  {passages.length === 0 ? <div className="rdr-loading">
                       Bu bölüm için metin
                       bulunamadı.
-                    </div>
-                  ) : (
+                    </div> : <div className={`rdr-book mode-${readerLanguage}`}>
 
-                    <div
-                      className={`rdr-book mode-${readerLanguage}`}
-                    >
-
-                      {currentPassages.map(
-                        (item) => (
-                          <div
-                            className="rdr-book-row"
-                            key={item.id}
-                            id={`ref-${item.reference}`}
-                          >
+                      {currentPassages.map(item => <div className="rdr-book-row" key={item.id} id={`ref-${item.reference}`}>
 
                             <div className="rdr-ref">
                               {item.reference}
                             </div>
 
-                            {(readerLanguage ===
-                              'greek' ||
-                              readerLanguage ===
-                                'both') && (
-                              <div className="rdr-col rdr-col-gr">
+                            {(readerLanguage === 'greek' || readerLanguage === 'both') && <div className="rdr-col rdr-col-gr">
 
                                 <div className="rdr-lang-tag">
                                   ΕΛΛΗΝΙΚΑ
                                 </div>
 
                                 <div className="rdr-greek-text">
-                                  {item.greek_text ||
-                                    (
-                                      <span className="rdr-empty">
+                                  {item.greek_text || <span className="rdr-empty">
                                         Metin yok.
-                                      </span>
-                                    )}
+                                      </span>}
                                 </div>
 
-                              </div>
-                            )}
+                              </div>}
 
-                            {(readerLanguage ===
-                              'english' ||
-                              readerLanguage ===
-                                'both') && (
-                              <div className="rdr-col rdr-col-en">
+                            {(readerLanguage === 'english' || readerLanguage === 'both') && <div className="rdr-col rdr-col-en">
 
                                 <div className="rdr-lang-tag">
                                   ENGLISH
                                 </div>
 
-                                {item.english_text ||
-                                  (
-                                    <span className="rdr-empty">
+                                {item.english_text || <span className="rdr-empty">
                                       English
                                       translation
                                       unavailable.
-                                    </span>
-                                  )}
+                                    </span>}
 
-                              </div>
-                            )}
+                              </div>}
 
-                          </div>
-                        )
-                      )}
+                          </div>)}
 
-                    </div>
+                    </div>}
 
-                  )}
+                  
 
-                  {/* PAGINATION */}
+                  {totalPages > 1 && <div className="rdr-pagination">
 
-                  {totalPages > 1 && (
-                    <div className="rdr-pagination">
-
-                      <button
-                        disabled={
-                          currentPage === 1
-                        }
-                        onClick={() =>
-                          handlePageChange(
-                            currentPage - 1
-                          )
-                        }
-                        className="rdr-page-btn"
-                      >
+                      <button disabled={currentPage === 1} onClick={() => handlePageChange(currentPage - 1)} className="rdr-page-btn">
                         ‹ Önceki
                       </button>
 
-                      {paginationItems.map(
-                        (item, index) => {
-                          if (
-                            item === 'ellipsis-start' ||
-                            item === 'ellipsis-end'
-                          ) {
-                            return (
-                              <span
-                                key={`${item}-${index}`}
-                                className="rdr-page-ellipsis"
-                              >
+                      {paginationItems.map((item, index) => {
+              if (item === 'ellipsis-start' || item === 'ellipsis-end') {
+                return <span key={`${item}-${index}`} className="rdr-page-ellipsis">
                                 …
-                              </span>
-                            );
-                          }
-
-                          const pageNum = item;
-
-                          return (
-                            <button
-                              key={pageNum}
-                              className={`rdr-page-num ${
-                                pageNum ===
-                                currentPage
-                                  ? 'active'
-                                  : ''
-                              }`}
-                              onClick={() =>
-                                handlePageChange(
-                                  pageNum
-                                )
-                              }
-                            >
+                              </span>;
+              }
+              const pageNum = item;
+              return <button key={pageNum} className={`rdr-page-num ${pageNum === currentPage ? 'active' : ''}`} onClick={() => handlePageChange(pageNum)}>
                               {pageNum}
-                            </button>
-                          );
-                        }
-                      )}
+                            </button>;
+            })}
 
-                      <button
-                        disabled={
-                          currentPage ===
-                          totalPages
-                        }
-                        onClick={() =>
-                          handlePageChange(
-                            currentPage + 1
-                          )
-                        }
-                        className="rdr-page-btn"
-                      >
+                      <button disabled={currentPage === totalPages} onClick={() => handlePageChange(currentPage + 1)} className="rdr-page-btn">
                         Sonraki ›
                       </button>
 
-                    </div>
-                  )}
+                    </div>}
 
-                </>
-              )}
+                </>}
 
-            </div>
-          )}
+            </div>}
 
-        {/* ======================================================
-            SCROLL TOP
-        ====================================================== */}
+        
 
-        {showScrollTop && (
-          <button
-            className="rdr-scroll-top"
-            onClick={scrollToTop}
-            title="Yukarı Çık"
-          >
+        {showScrollTop && <button className="rdr-scroll-top" onClick={scrollToTop} title="Yukarı Çık">
             ↑
-          </button>
-        )}
+          </button>}
 
       </div>
 
-      {/* ========================================================
-          CSS
-      ======================================================== */}
+      
 
       <style jsx>{`
 
@@ -2813,10 +1638,6 @@ export default function PlotinusReader() {
           color: var(--accent);
         }
 
-        /* ====================================================
-           LEMMA SEARCH BOX
-        ==================================================== */
-
         .rdr-search-box {
           display: flex;
           align-items: center;
@@ -2979,10 +1800,6 @@ export default function PlotinusReader() {
           color: var(--accent);
           background: var(--greek-hover);
         }
-
-        /* ====================================================
-           LEMMA RESULTS
-        ==================================================== */
 
         .rdr-lexical-search-results {
           margin-top: 8px;
@@ -3156,10 +1973,6 @@ export default function PlotinusReader() {
           font-size: 0.85rem;
         }
 
-        /* ====================================================
-           DEVAMINI GÖSTER
-        ==================================================== */
-
         .rdr-show-more {
           display: flex;
           justify-content: center;
@@ -3192,10 +2005,6 @@ export default function PlotinusReader() {
           color: var(--text-light);
           font-size: 0.68rem;
         }
-
-        /* ====================================================
-           BOOK
-        ==================================================== */
 
         .rdr-book {
           display: flex;
@@ -3284,10 +2093,6 @@ export default function PlotinusReader() {
           font-family: var(--font-ui);
         }
 
-        /* ====================================================
-           PAGINATION
-        ==================================================== */
-
         .rdr-pagination {
           display: flex;
           justify-content: center;
@@ -3329,10 +2134,6 @@ export default function PlotinusReader() {
           font-size: 0.85rem;
         }
 
-        /* ====================================================
-           SCROLL TOP
-        ==================================================== */
-
         .rdr-scroll-top {
           position: fixed;
           bottom: 24px;
@@ -3351,10 +2152,6 @@ export default function PlotinusReader() {
           box-shadow: var(--popup-shadow);
           z-index: 50;
         }
-
-        /* ====================================================
-           MOBILE
-        ==================================================== */
 
         @media (max-width: 768px) {
 
@@ -3443,6 +2240,5 @@ export default function PlotinusReader() {
         }
 
       `}</style>
-    </Layout>
-  );
+    </Layout>;
 }

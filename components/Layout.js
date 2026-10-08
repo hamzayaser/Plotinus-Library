@@ -1,22 +1,30 @@
 import Link from 'next/link';
+import MobileNavigation from './MobileNavigation';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
-
-const NAV_ITEMS = [
-  { href: '/', label: 'Ana Sayfa' },
-  { href: '/kutuphane', label: 'Kütüphane' },
-  { href: '/via-plotin', label: 'Via Plotin' },
-  { href: '/reader', label: 'Enneads' },
-  { href: '/iletisim', label: 'İletişim' },
-];
-
+const NAV_ITEMS = [{
+  href: '/',
+  label: 'Ana Sayfa'
+}, {
+  href: '/kutuphane',
+  label: 'Kütüphane'
+}, {
+  href: '/via-plotin',
+  label: 'Via Plotin'
+}, {
+  href: '/reader',
+  label: 'Enneads'
+}, {
+  href: '/iletisim',
+  label: 'İletişim'
+}];
 const THEME_KEY = 'plotinus-theme';
-
-export default function Layout({ children }) {
+export default function Layout({
+  children
+}) {
   const router = useRouter();
   const [theme, setTheme] = useState('dark');
-
   useEffect(() => {
     const saved = typeof window !== 'undefined' && localStorage.getItem(THEME_KEY);
     if (saved === 'light' || saved === 'dark') {
@@ -24,60 +32,36 @@ export default function Layout({ children }) {
       document.documentElement.setAttribute('data-theme', saved);
     }
   }, []);
-
   function toggleTheme() {
     const next = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem(THEME_KEY, next);
   }
-
-  return (
-    <>
-      <nav className="nav">
+  return <>
+      <MobileNavigation items={NAV_ITEMS} brand="Plotinos Kütüphanesi" theme={theme} onToggle={toggleTheme} />
+      <nav className="nav desktop-nav">
         <div className="nav-inner">
           <Link href="/" className="brand">
-            <Image
-              src="/logo.png"
-              alt="Plotinos Kütüphanesi logosu"
-              width={46}
-              height={52}
-              className="brand-logo"
-              style={{
-                filter: theme === 'light' ? 'invert(1) hue-rotate(180deg)' : 'none',
-                transition: 'filter 0.3s ease',
-              }}
-              priority
-            />
+            <Image src="/logo.png" alt="Plotinos Kütüphanesi logosu" width={46} height={52} className="brand-logo" style={{
+            filter: theme === 'light' ? 'invert(1) hue-rotate(180deg)' : 'none',
+            transition: 'filter 0.3s ease'
+          }} priority />
             <em>Plotinos</em> Kütüphanesi
           </Link>
-          <div className="nav-links" style={{ alignItems: 'center' }}>
-            {NAV_ITEMS.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={router.pathname === item.href ? 'active' : ''}
-              >
+          <div className="nav-links" style={{
+          alignItems: 'center'
+        }}>
+            {NAV_ITEMS.map(item => <Link key={item.href} href={item.href} className={router.pathname === item.href ? 'active' : ''}>
                 {item.label}
-              </Link>
-            ))}
-            <button
-              type="button"
-              className="theme-toggle"
-              onClick={toggleTheme}
-              aria-label={theme === 'dark' ? 'Açık temaya geç' : 'Koyu temaya geç'}
-              title={theme === 'dark' ? 'Açık temaya geç' : 'Koyu temaya geç'}
-            >
-              {theme === 'dark' ? (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              </Link>)}
+            <button type="button" className="theme-toggle" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Açık temaya geç' : 'Koyu temaya geç'} title={theme === 'dark' ? 'Açık temaya geç' : 'Koyu temaya geç'}>
+              {theme === 'dark' ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                   <circle cx="12" cy="12" r="4.2" />
                   <path d="M12 2.5v2.4M12 19.1v2.4M4.6 4.6l1.7 1.7M17.7 17.7l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.6 19.4l1.7-1.7M17.7 6.3l1.7-1.7" strokeLinecap="round" />
-                </svg>
-              ) : (
-                <svg viewBox="0 0 24 24" fill="currentColor">
+                </svg> : <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M20.4 14.7A8.5 8.5 0 1 1 9.3 3.6a7 7 0 0 0 11.1 11.1Z" />
-                </svg>
-              )}
+                </svg>}
             </button>
           </div>
         </div>
@@ -86,21 +70,14 @@ export default function Layout({ children }) {
       <footer className="footer">
         Ἓν καὶ Πᾶν — Bir ve Tümü · Plotinos Kütüphanesi © {new Date().getFullYear()}
       </footer>
-    </>
-  );
+    </>;
 }
-
 export function EmanationRings() {
   const rings = [120, 220, 340, 480];
-  return (
-    <div className="emanation" aria-hidden="true">
-      {rings.map((size) => (
-        <div
-          key={size}
-          className="ring"
-          style={{ width: size, height: size }}
-        />
-      ))}
-    </div>
-  );
+  return <div className="emanation" aria-hidden="true">
+      {rings.map(size => <div key={size} className="ring" style={{
+      width: size,
+      height: size
+    }} />)}
+    </div>;
 }
