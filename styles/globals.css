@@ -171,7 +171,7 @@ a {
   font-size: 0.7rem;
 
   letter-spacing: 0.1em;
-  text-transform: uppercase;
+  text-transform: capitalize;
 
   color: var(--parchment-dim);
 
