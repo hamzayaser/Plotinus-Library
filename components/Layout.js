@@ -14,7 +14,7 @@ const NAV_ITEMS = [{
   label: 'Via Plotin'
 }, {
   href: '/reader',
-  label: 'Enneads'
+  label: 'Enneadlar'
 }, {
   href: '/iletisim',
   label: 'İletişim'

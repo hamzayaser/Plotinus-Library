@@ -1,7 +1,9 @@
+import { ResumeReading } from '../components/ReadingSupport';
 import { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import Link from 'next/link';
 import { supabase } from '../lib/supabaseClient';
+const HOME_SECTIONS = [{"href":"/reader","title":"Enneadlar","description":"Plotinos’un metinlerini Grekçe ve İngilizce yan yana okuyun."},{"href":"/kutuphane","title":"Kütüphane","description":"Çalışmaları, çevirileri ve araştırma kaynaklarını keşfedin."},{"href":"/via-plotin","title":"Via Plotin","description":"Plotinos üzerine yazılara ve incelemelere göz atın."}];
 function EmanationScene({
   scrollProgress
 }) {
@@ -74,26 +76,9 @@ export default function Home({
   siteSettings
 }) {
   const [scrollProgress, setScrollProgress] = useState(0);
-  const [isLightMode, setIsLightMode] = useState(false);
   const heroImageUrl = siteSettings?.hero_image_url || '';
   const heroImageCaption = siteSettings?.hero_image_caption || '';
   useEffect(() => {
-    const checkTheme = () => {
-      const htmlClass = document.documentElement.className;
-      const bodyClass = document.body.className;
-      const isLight = htmlClass.includes('light') || bodyClass.includes('light') || document.documentElement.getAttribute('data-theme') === 'light';
-      setIsLightMode(isLight);
-    };
-    checkTheme();
-    const observer = new MutationObserver(checkTheme);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class', 'data-theme']
-    });
-    observer.observe(document.body, {
-      attributes: true,
-      attributeFilter: ['class']
-    });
     let ticking = false;
     const updateScroll = () => {
       if (ticking) return;
@@ -115,19 +100,18 @@ export default function Home({
     updateScroll();
     return () => {
       window.removeEventListener('scroll', updateScroll);
-      observer.disconnect();
     };
   }, []);
   const p = scrollProgress;
   return <Layout>
-      <main className="modern-home">
+      <main className="modern-home"><div className="home-reading-memory"><ResumeReading /></div>
         <section className="modern-hero">
           <div className="modern-hero-inner">
             <div className="hero-noise" aria-hidden="true" />
             <div className="hero-light hero-light-one" aria-hidden="true" />
             <div className="hero-light hero-light-two" aria-hidden="true" />
 
-            <EmanationScene scrollProgress={p} />
+            <div className="home-scene"><EmanationScene scrollProgress={p} /></div>
 
             <div className="modern-hero-left">
               <div className="modern-badge">
@@ -135,13 +119,8 @@ export default function Home({
                 Plotinos Kütüphanesi
               </div>
 
-              
-              <h1 style={{
-              fontSize: '1.15rem',
-              lineHeight: '2',
-              maxWidth: '380px',
-              fontWeight: isLightMode ? '700' : '400'
-            }}>
+
+              <h1 className="home-quote">
                 O yaşam ki, aşağı ve düşük tüm başkalardan arınık, mücerret halde;
                 dünyevi olan hiçbir şeye arzu duymayan bir yaşamdır.
                 Uzletten vahdete kaçıştır. <span style={{
@@ -153,44 +132,11 @@ export default function Home({
               </h1>
             </div>
 
-            <div className="modern-hero-right">
-              <Link href="/kutuphane" className="modern-discover-link">
-                <span className="modern-discover-number">01</span>
-                <span className="modern-discover-text">
-                  <strong>Kütüphaneyi Keşfet</strong>
-                </span>
-                <span className="modern-discover-arrow">↗</span>
-              </Link>
-
-              <Link href="/via-plotin" className="modern-discover-link">
-                <span className="modern-discover-number">02</span>
-                <span className="modern-discover-text">
-                  <strong>Via Plotin'i Keşfet</strong>
-                </span>
-                <span className="modern-discover-arrow">↗</span>
-              </Link>
-            </div>
-
-            <div className="modern-hero-bottom">
-              <span>[ THE ONE ]</span>
-              <div className="modern-scroll-progress">
-                <span>01</span>
-                <div>
-                  <i style={{
-                  transform: `scaleX(${Math.max(0.04, p)})`
-                }} />
-                </div>
-                <span>04</span>
-              </div>
-              <span>[ EMANATION ]</span>
-            </div>
-
-            <div className="hero-scroll-indicator">
-              <span>Keşfet</span>
-              <span className="scroll-arrow">↓</span>
-            </div>
+            <nav className="modern-hero-right" aria-label="Koleksiyonlar">{HOME_SECTIONS.map((item,index)=><Link key={item.href} href={item.href} className="modern-discover-link"><span className="modern-discover-number">{String(index+1).padStart(2,'0')}</span><span className="modern-discover-text"><strong>{item.title}</strong></span><span className="modern-discover-arrow" aria-hidden="true">↗</span></Link>)}</nav>
           </div>
         </section>
+
+        <section className="home-collections" aria-label="Koleksiyonları keşfet"><div className="home-collections-grid">{HOME_SECTIONS.map((item,index)=><article className="home-collection" key={item.href}><span className="home-collection-number">{String(index+1).padStart(2,'0')}</span><h2>{item.title}</h2><p>{item.description}</p><Link href={item.href}>{item.title} →</Link></article>)}</div></section>
 
         {heroImageUrl && <section className="modern-announcement">
             <div className="modern-announcement-inner">

@@ -1,3 +1,5 @@
+import { useRouter } from 'next/router';
+import { ResumeReading, ReadingTools, useReadingMemory, useReaderView } from '../components/ReadingSupport';
 import { fetchAllPaginated } from '../lib/fetchAllPaginated';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import Layout from '../components/Layout';
@@ -118,6 +120,11 @@ const GREEK_KB_DIACRITICS = [{
   title: 'Iota subscript'
 }];
 export default function PlotinusReader() {
+  const router=useRouter();
+  const handledResume=useRef(null);
+  const [readerView,setReaderView]=useReaderView();
+  const bookRef=useRef(null);
+  const pageScroll=useRef(false);
   const [selectedEnnead, setSelectedEnnead] = useState(null);
   const [selectedTractate, setSelectedTractate] = useState(null);
   const [selectedSections, setSelectedSections] = useState([]);
@@ -298,8 +305,8 @@ export default function PlotinusReader() {
         const el = document.getElementById(`ref-${refToScroll}`);
         if (el) {
           el.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center'
+            behavior: router.query.resume === '1' ? 'instant' : 'smooth',
+            block: router.query.resume === '1' ? 'start' : 'center'
           });
         }
       }, 200);
@@ -534,6 +541,7 @@ export default function PlotinusReader() {
     });
   };
   const resetAll = () => {
+    handledResume.current=null; if(router.query.resume)router.replace('/reader',undefined,{shallow:true});
     setSelectedEnnead(null);
     setSelectedTractate(null);
     setSelectedSections([]);
@@ -627,12 +635,10 @@ export default function PlotinusReader() {
   const totalPages = Math.ceil(passages.length / PAGE_SIZE);
   const paginationItems = useMemo(() => getPaginationItems(currentPage, totalPages), [currentPage, totalPages]);
   const currentPassages = passages.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-  const handlePageChange = page => {
-    setCurrentPage(page);
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
+  useEffect(()=>{if(!router.isReady||router.query.resume!=='1'||handledResume.current===router.asPath||!allTexts.length)return;handledResume.current=router.asPath;const reference=router.query.ref;if(typeof reference!=='string'||!allTexts.some(item=>item.reference===reference))return;const parsed=parseReference(reference);if(!parsed)return;setSelectedEnnead(parsed.ennead);setSelectedTractate(parsed.tractate);setSelectedSections(allTexts.filter(item=>{const p=parseReference(item.reference);return p&&p.ennead===parsed.ennead&&p.tractate===parsed.tractate;}).map(item=>item.reference));setPendingScroll(reference);},[router.isReady,router.asPath,allTexts]);
+  useReadingMemory({title:'Ennead '+selectedEnnead+' · '+selectedTractate,work:selectedEnnead+'.'+selectedTractate,ready:selectedSections.length>0&&!loading&&!pendingScroll&&!searchQuery.trim()&&currentPassages.length>0,page:currentPage});
+  useEffect(()=>{if(pageScroll.current){pageScroll.current=false;bookRef.current?.scrollIntoView({behavior:'instant',block:'start'});}},[currentPage]);
+  const handlePageChange = page => {if(page<1||page>totalPages||page===currentPage)return;pageScroll.current=true;setCurrentPage(page);
   };
   const scrollToTop = () => {
     window.scrollTo({
@@ -641,11 +647,11 @@ export default function PlotinusReader() {
     });
   };
   return <Layout>
-      <div className="rdr-page" ref={topRef}>
+      <div className="rdr-page" data-wide={readerView.wide} data-focus={selectedSections.length>0 && readerView.focus} ref={topRef}>
 
         
 
-        {!selectedEnnead && <div className="container rdr-select">
+        {!selectedEnnead && <div className="container rdr-select"><div className="reader-resume-slot"><ResumeReading /></div>
 
             <h1 className="rdr-title">
               Okumak istediğiniz{' '}
@@ -925,7 +931,7 @@ export default function PlotinusReader() {
 
                 </div>
 
-                <div className="rdr-toolbar-right">
+                <div className="rdr-toolbar-right"><ReadingTools view={readerView} onChange={setReaderView} />
 
                   {sections.length > 0 && <button className={`rdr-btn-fihrist ${showSectionGrid ? 'active' : ''}`} onClick={() => setShowSectionGrid(!showSectionGrid)}>
                       Bölüm İndeksi
@@ -1136,7 +1142,7 @@ export default function PlotinusReader() {
                   {passages.length === 0 ? <div className="rdr-loading">
                       Bu bölüm için metin
                       bulunamadı.
-                    </div> : <div className={`rdr-book mode-${readerLanguage}`}>
+                    </div> : <div ref={bookRef} className={`rdr-book mode-${readerLanguage}`}>
 
                       {currentPassages.map(item => <div className="rdr-book-row" key={item.id} id={`ref-${item.reference}`}>
 
