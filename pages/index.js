@@ -3,7 +3,9 @@ import { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import Link from 'next/link';
 import { supabase } from '../lib/supabaseClient';
-const HOME_SECTIONS = [{"href":"/reader","title":"Enneadlar","description":"Plotinos’un metinlerini Grekçe ve İngilizce yan yana okuyun."},{"href":"/kutuphane","title":"Kütüphane","description":"Çalışmaları, çevirileri ve araştırma kaynaklarını keşfedin."},{"href":"/via-plotin","title":"Via Plotin","description":"Plotinos üzerine yazılara ve incelemelere göz atın."}];
+
+const HOME_SECTIONS = [{"href":"/reader","title":"Enneadlar","description":"Plotinos’un metinlerini Grekçe ve İngilizce yan yana okuyun."},{"href":"/kutuphane","title":"Kütüphane","description":"Çalışmaları, çevirileri ve araştırma kaynaklarını keşfedin."},{"href":"/via-plotin","title":"Via Plotin","description":"Plotinos üzerine yazılmış yazılara ve incelemelere göz atın."}];
+
 function EmanationScene({
   scrollProgress
 }) {
@@ -72,12 +74,14 @@ function EmanationScene({
       <div className="emanation-ray emanation-ray-four" />
     </div>;
 }
+
 export default function Home({
   siteSettings
 }) {
   const [scrollProgress, setScrollProgress] = useState(0);
   const heroImageUrl = siteSettings?.hero_image_url || '';
   const heroImageCaption = siteSettings?.hero_image_caption || '';
+
   useEffect(() => {
     let ticking = false;
     const updateScroll = () => {
@@ -102,7 +106,9 @@ export default function Home({
       window.removeEventListener('scroll', updateScroll);
     };
   }, []);
+
   const p = scrollProgress;
+
   return <Layout>
       <main className="modern-home"><div className="home-reading-memory"><ResumeReading /></div>
         <section className="modern-hero">
@@ -119,7 +125,6 @@ export default function Home({
                 Plotinos Kütüphanesi
               </div>
 
-
               <h1 className="home-quote">
                 O yaşam ki, aşağı ve düşük tüm başkalardan arınık, mücerret halde;
                 dünyevi olan hiçbir şeye arzu duymayan bir yaşamdır.
@@ -131,8 +136,6 @@ export default function Home({
               }}>[En. VI.9.11]</span>
               </h1>
             </div>
-
-            <nav className="modern-hero-right" aria-label="Koleksiyonlar">{HOME_SECTIONS.map((item,index)=><Link key={item.href} href={item.href} className="modern-discover-link"><span className="modern-discover-number">{String(index+1).padStart(2,'0')}</span><span className="modern-discover-text"><strong>{item.title}</strong></span><span className="modern-discover-arrow" aria-hidden="true">↗</span></Link>)}</nav>
           </div>
         </section>
 
@@ -161,6 +164,7 @@ export default function Home({
       </main>
     </Layout>;
 }
+
 export async function getServerSideProps() {
   const {
     data: siteSettings
